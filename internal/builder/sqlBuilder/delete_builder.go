@@ -5,20 +5,20 @@ type deleteSqlBuilder struct {
 	identifier string
 }
 
-func (s *deleteSqlBuilder) AddColumn(colArr []string) sqlBuilderI {
+func (s *deleteSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *deleteSqlBuilder) AddValue(valArr []string) sqlBuilderI {
+func (s *deleteSqlBuilder) AddValue(valArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *deleteSqlBuilder) AddTable(tbName string) sqlBuilderI {
+func (s *deleteSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *deleteSqlBuilder) AddIdentifier(identifier string) sqlBuilderI {
+func (s *deleteSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	s.identifier = identifier
 	return s
 }

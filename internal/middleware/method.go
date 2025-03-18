@@ -16,7 +16,8 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	//"github.com/gorilla/mux"
-	"backend/internal/domain/repository"
+
+	"backend/internal/domain/model"
 	"backend/internal/domain/service"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -64,8 +65,8 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 
 		//fetchedRow := db.QueryRow(context.Background(), "SELECT * FROM userauth WHERE LOWER(username) = $1", strings.ToLower(reqBody.Username))
 
-		userRepository := repository.NewRepository("user")
-		userService := service.NewService("user", db, userRepository)
+		// userRepository := repository.NewUserRepository[auth.UserData]()
+		userService := service.NewUserService[model.UserData](db)
 
 		// fetchedRow := db.QueryRow(context.Background(), "SELECT * FROM userauth WHERE LOWER(username) = $1", strings.ToLower(reqBody.Username))
 
@@ -80,20 +81,24 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 		// 	return
 		// }
 
-		queriedData, queriedDataErr := userService.Select("userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
+		queriedData, queriedDataErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
 		if queriedDataErr != nil {
-			http.Error(w, "failed to queried user from database", http.StatusInternalServerError)
+			http.Error(w, "failed to queried user from database: "+queriedDataErr.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		// Since we use identifier we have to use the first element
+		fmt.Println(queriedData)
+		fmt.Println("----------")
+		fmt.Println(queriedData[0].Password)
+		fmt.Println(reqBody.Password)
 		if queriedData[0].Password != reqBody.Password {
 			http.Error(w, "failed to authenticate user", http.StatusUnauthorized)
 			return
 		}
 
 		//create context to pass the data to actual handler
-		newUser := auth.UserData{Id: queriedData[0].Id,
+		newUser := model.UserData{Id: queriedData[0].Id,
 			Username:  queriedData[0].Username,
 			Password:  queriedData[0].Password,
 			Nickname:  queriedData[0].Nickname,

@@ -1,13 +1,21 @@
 package sqlbuilder
 
-type sqlBuilderI interface {
-	AddColumn(colArr []string) sqlBuilderI
-	AddTable(tbName string) sqlBuilderI
-	AddIdentifier(identifier string) sqlBuilderI
+type SqlBuilderI interface {
+	AddColumn(colArr []string) SqlBuilderI
+	AddTable(tbName string) SqlBuilderI
+	AddIdentifier(identifier string) SqlBuilderI
 	Build() string
 }
 
-func NewSqlBuilder(builderName string) sqlBuilderI {
+// type SqlBuilderArgs struct {
+// 	tbName        string
+// 	colArr        []string
+// 	valArr        []string
+// 	identifier    string
+// 	valIdentifier string
+// }
+
+func NewSqlBuilder(builderName string) SqlBuilderI {
 	switch builderName {
 	case "select":
 		return &selectSqlbuilder{}

@@ -1,6 +1,7 @@
 package sqlbuilder
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -29,12 +30,12 @@ type updateSqlBuilder struct {
 // 	build() string
 // }
 
-func (s *updateSqlBuilder) AddTable(tbName string) sqlBuilderI {
+func (s *updateSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *updateSqlBuilder) AddColumn(colArr []string) sqlBuilderI {
+func (s *updateSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	if len(colArr) == 0 {
 		return s
 	}
@@ -51,11 +52,14 @@ func (s *updateSqlBuilder) AddColumn(colArr []string) sqlBuilderI {
 	prepStatement = strings.Join(prepStatementArr[:len(prepStatementArr)-1], " ")
 
 	s.col = prepStatement
+	s.colArr = colArr
+
+	fmt.Println(prepStatement)
 
 	return s
 }
 
-func (s *updateSqlBuilder) AddIdentifier(identifier string) sqlBuilderI {
+func (s *updateSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	s.identifier = identifier
 	return s
 }
@@ -66,13 +70,18 @@ func (s *updateSqlBuilder) Build() string {
 		return ""
 	}
 
-	prepStatement += s.tbName + " SET"
-	for i := 0; i < len(s.colArr); i++ {
-		prepStatement += " " + s.colArr[i] + " = $" + strconv.Itoa(i+1) + " ,"
-	}
+	fmt.Println("about to add set")
 
-	prepStatementArr := strings.Split(prepStatement, " ")
-	prepStatement = strings.Join(prepStatementArr[:len(prepStatementArr)-1], " ")
+	prepStatement += s.tbName + " SET " + s.col
+	// fmt.Println(s.colArr)
+	// for i := 0; i < len(s.colArr); i++ {
+	// 	prepStatement += " " + s.colArr[i] + " = $" + strconv.Itoa(i+1) + " ,"
+	// }
+
+	fmt.Println(prepStatement)
+
+	// prepStatementArr := strings.Split(prepStatement, " ")
+	// prepStatement = strings.Join(prepStatementArr[:len(prepStatementArr)-1], " ")
 
 	if s.identifier != "" {
 		prepStatement += " WHERE " + s.identifier + " = $" + strconv.Itoa(len(s.colArr)+1)

@@ -2,6 +2,9 @@ package main
 
 import (
 	"backend/internal/auth"
+	// "backend/internal/domain/repository"
+	"backend/internal/domain/model"
+	"backend/internal/domain/service"
 	"backend/internal/middleware"
 	"context"
 	"log"
@@ -47,8 +50,13 @@ func main() {
 
 	muxhandler := mux.NewRouter()
 
-	authHandlers := &auth.AuthHandler{DB: db, CxtTimeout: cxtTimeout}
-	handleQuerys := &auth.HandleQuery{DB: db}
+	// userRepo := repository.NewRepository("user")
+	userSvc := service.NewUserService[model.UserData](db)
+	settingSvc := service.NewUserService[model.SettingStruct](db)
+	authSvc := service.NewAuthService(db)
+
+	authHandlers := &auth.AuthHandler{DB: db, CxtTimeout: cxtTimeout, Svc: authSvc}
+	handleQuerys := &auth.HandleQuery{DB: db, UserSvc: userSvc, SettingSvc: settingSvc}
 
 	muxhandler.HandleFunc("/user/auth",
 		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.HandleSigningToken, db))).Methods("OPTIONS", "POST")

@@ -9,7 +9,7 @@ type selectSqlbuilder struct {
 	identifier string
 }
 
-func (s *selectSqlbuilder) AddColumn(colArr []string) sqlBuilderI {
+func (s *selectSqlbuilder) AddColumn(colArr []string) SqlBuilderI {
 	if len(colArr) == 0 {
 		return s
 	}
@@ -23,7 +23,7 @@ func (s *selectSqlbuilder) AddColumn(colArr []string) sqlBuilderI {
 	return s
 }
 
-func (s *selectSqlbuilder) AddTable(tbName string) sqlBuilderI {
+func (s *selectSqlbuilder) AddTable(tbName string) SqlBuilderI {
 	if tbName == "" {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (s *selectSqlbuilder) AddTable(tbName string) sqlBuilderI {
 	return s
 }
 
-func (s *selectSqlbuilder) AddIdentifier(identifier string) sqlBuilderI {
+func (s *selectSqlbuilder) AddIdentifier(identifier string) SqlBuilderI {
 	if identifier != "" {
 		s.identifier = identifier
 		return s
@@ -39,7 +39,7 @@ func (s *selectSqlbuilder) AddIdentifier(identifier string) sqlBuilderI {
 	return nil
 }
 
-func (s *selectSqlbuilder) AddValue(valArr []string) sqlBuilderI {
+func (s *selectSqlbuilder) AddValue(valArr []string) SqlBuilderI {
 	return s
 }
 

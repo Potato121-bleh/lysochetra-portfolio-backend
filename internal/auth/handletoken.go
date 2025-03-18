@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"backend/internal/domain/repository"
+	"backend/internal/domain/model"
 	"backend/internal/domain/service"
 	generator "backend/internal/generateKey"
 	"context"
@@ -30,13 +30,14 @@ type UserRequestInfo struct {
 	Password string `json:"password"`
 }
 
-type UserData struct {
-	Id        int    `json:"userId"`
-	Username  string `json:"userName"`
-	Password  string `json:"password"`
-	Nickname  string `json:"nickname"`
-	SettingId int    `json:"settingId"`
-}
+// type UserData struct {
+// 	Id             int       `json:"userId"`
+// 	Username       string    `json:"userName"`
+// 	Nickname       string    `json:"nickname"`
+// 	Password       string    `json:"password"`
+// 	RegisteredDate time.Time `json:"registered_date"`
+// 	SettingId      int       `json:"settingId"`
+// }
 
 type SignUpUser struct {
 	Username string `json:"username"`
@@ -47,10 +48,11 @@ type SignUpUser struct {
 type AuthHandler struct {
 	DB         *pgxpool.Pool
 	CxtTimeout context.Context
+	Svc        *service.AuthService
 }
 
 func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {
-	userStruct := r.Context().Value(NewUserKey).(UserData)
+	userStruct := r.Context().Value(NewUserKey).(model.UserData)
 	testprop := "your name is: " + userStruct.Nickname + "and your username is: " + userStruct.Username
 	newCookie := http.Cookie{
 		Name:     "auth_token",
@@ -69,7 +71,7 @@ func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {
 func (s *AuthHandler) HandleSigningToken(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println("entered 1")
-	userStruct := r.Context().Value(NewUserKey).(UserData)
+	userStruct := r.Context().Value(NewUserKey).(model.UserData)
 	fmt.Println("entered 2")
 	//get key
 	loadEnvErrs := godotenv.Load("../.env")
@@ -158,7 +160,7 @@ func (s *AuthHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	responseClient := UserData{
+	responseClient := model.UserData{
 		Id:        int(claims["Id"].(float64)),
 		Username:  claims["Username"].(string),
 		Nickname:  claims["Nickname"].(string),
@@ -253,23 +255,9 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
-		//fetch user from db
-		// fetchedRow := db.QueryRow(context.Background(), "SELECT * FROM userauth WHERE LOWER(username) = $1", strings.ToLower(reqBody.Username))
-
-		// var useridTem int
-		// var usernameTem string
-		// var userpasswordTem string
-		// var usernicknameTem string
-		// var usersettingidTem int
-		// scannedRowErr := fetchedRow.Scan(&useridTem, &usernameTem, &usernicknameTem, &userpasswordTem, nil, &usersettingidTem)
-		// if scannedRowErr != nil {
-		// 	http.Error(w, "User not found: "+scannedRowErr.Error(), http.StatusUnauthorized)
-		// 	return
-		// }
-
-		userRepo := repository.NewRepository("user")
-		userService := service.NewService("user", db, userRepo)
-		queriedUser, queriedErr := userService.Select("userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
+		// userRepo := repository.NewRepository("user", UserData{})
+		userService := service.NewUserService[model.UserData](db)
+		queriedUser, queriedErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
 		if queriedErr != nil || len(queriedUser) != 1 {
 			http.Error(w, "failed to queried user from db", http.StatusUnauthorized)
 			return
@@ -281,7 +269,7 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 		}
 
 		//create context to pass the data to actual handler
-		newUser := UserData{Id: queriedUser[0].Id,
+		newUser := model.UserData{Id: queriedUser[0].Id,
 			Username:  queriedUser[0].Username,
 			Password:  queriedUser[0].Password,
 			Nickname:  queriedUser[0].Nickname,
@@ -294,6 +282,10 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 }
 
 func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
+
+	// repoModel := UserData{}
+	// userRepo := repository.NewRepository("user", repoModel)
+	// userService := service.NewUserService[UserData](s.DB)
 
 	//Validate the CORS
 	reqBody := SignUpUser{}
@@ -325,63 +317,17 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//We insert user data
-	insertUserCommandTag, insertUserErr := tx.Exec(
-		context.Background(),
-		"INSERT INTO userauth (username, nickname, password) VALUES ($1, $2, $3)",
-		reqBody.Username,
-		reqBody.Nickname,
-		reqBody.Password,
-	)
+	// As we want to use Signup which not available in original interface we have to come up with type assertion
+	// which allow us to use the extra method outside of assign interface
+	signUpErr := s.Svc.SignUp(tx, reqBody.Username, reqBody.Nickname, reqBody.Password)
+	if signUpErr != nil {
+		rollbackErr := tx.Rollback(context.Background())
+		if rollbackErr != nil {
+			http.Error(w, fmt.Sprintf("failed to sign user to database & failed to rollback: %v", signUpErr.Error()), http.StatusInternalServerError)
+			return
+		}
 
-	if insertUserErr != nil || insertUserCommandTag.RowsAffected() != 1 {
-		tx.Rollback(context.Background())
-		http.Error(w, "failed to add user into database (01): "+insertUserErr.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//we insert setting for user
-	insertSettingCommandTag, insertSettingErr := tx.Exec(context.Background(),
-		"INSERT INTO user_setting (darkmode, sound, colorpalettes, font, language) VALUES (0, 0, 0, 1, 1)",
-	)
-	if insertSettingErr != nil || insertSettingCommandTag.RowsAffected() != 1 {
-		tx.Rollback(context.Background())
-		http.Error(w, "failed to add user into database", http.StatusInternalServerError)
-		return
-	}
-
-	//we retrieve userid via username
-	userIdRow := tx.QueryRow(context.Background(), "SELECT userid FROM userauth WHERE username = $1", reqBody.Username)
-
-	var recentUserId int
-	scanUserIdErr := userIdRow.Scan(&recentUserId)
-	if scanUserIdErr != nil {
-		tx.Rollback(context.Background())
-		http.Error(w, "failed create new user (1): "+scanUserIdErr.Error(), http.StatusInternalServerError)
-		return
-	}
-	fmt.Println(recentUserId)
-
-	//we retrieve user id from setting and checking for (safety check)
-	checkIdRow := tx.QueryRow(context.Background(), "SELECT settingid FROM user_setting WHERE settingid = $1", recentUserId)
-
-	var settingIdValidate int
-	idValidationErr := checkIdRow.Scan(&settingIdValidate)
-	if idValidationErr != nil {
-		tx.Rollback(context.Background())
-		http.Error(w, "failed create new user (2): "+idValidationErr.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	//we can update the references
-	updateSettingCommandTag, updateSettingidErr := tx.Exec(context.Background(),
-		"UPDATE userauth SET setting_id = $1 WHERE userid = $2",
-		recentUserId,
-		recentUserId,
-	)
-	if updateSettingidErr != nil || updateSettingCommandTag.RowsAffected() != 1 {
-		tx.Rollback(context.Background())
-		http.Error(w, "failed create new user (3): "+updateSettingidErr.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("failed to sign user to database: %v", signUpErr.Error()), http.StatusInternalServerError)
 		return
 	}
 

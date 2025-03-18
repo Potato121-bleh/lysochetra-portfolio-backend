@@ -1,6 +1,7 @@
 package sqlbuilder
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -12,12 +13,12 @@ type insertSqlBuilder struct {
 	identifier string
 }
 
-func (s *insertSqlBuilder) AddTable(tbName string) sqlBuilderI {
+func (s *insertSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *insertSqlBuilder) AddColumn(colArr []string) sqlBuilderI {
+func (s *insertSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	prepStatement := " ("
 	if colArr == nil {
 		return nil
@@ -26,16 +27,20 @@ func (s *insertSqlBuilder) AddColumn(colArr []string) sqlBuilderI {
 	for i := 0; i < len(colArr); i++ {
 		prepStatement += " " + colArr[i] + " ,"
 	}
-	prepStatement += " ) "
+	fmt.Println("Before split: ")
+	fmt.Println(prepStatement)
 	prepStatementArr := strings.Split(prepStatement, " ")
 	prepStatementformatted := strings.Join(
-		append(prepStatementArr[:len(prepStatementArr)-2], prepStatementArr[len(prepStatementArr)-1:]...),
+		prepStatementArr[:len(prepStatementArr)-1],
 		" ")
+	fmt.Println(prepStatementArr[:len(prepStatementArr)-1])
+	prepStatementformatted += " ) "
+	fmt.Println(prepStatementformatted)
 	s.col = prepStatementformatted
 	return s
 }
 
-func (s *insertSqlBuilder) AddIdentifier(identifier string) sqlBuilderI {
+func (s *insertSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	return s
 }
 

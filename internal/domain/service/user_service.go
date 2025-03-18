@@ -2,90 +2,130 @@ package service
 
 import (
 	"backend/internal/domain/repository"
+	"backend/internal/util/dbutil"
 
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UserServiceI interface {
-	Select(tbName string, identifier string, valIdentifier string) ([]repository.UserData, error)
-	Insert(tbName string, colArr []string, valArr []string) error
-	Update(tbName string, colArr []string, identifier string, valIdentitier string) error
-	Delete(tbName string, identifier string, valIdentifier string) error
-}
+// type UserServiceI interface {
+// 	ServiceI
+// 	SignUp(reqUsername string, reqNickname string, reqPassword string) error
+// }
 
-type UserService struct {
+// The Generic of userService have to match its repository Generic
+//
+//	Example: "if UserRepository[userStruct], then the userService should also be UserService[userStruct]"
+//	NOTE: "Please use NewUserService as it prepare it for you"
+//
+// .
+type UserService[T dbutil.OnlyStruct] struct {
 	db   *pgxpool.Pool
-	repo repository.UserRepoI
+	repo repository.UserRepository[T]
 }
 
-func (s *UserService) Select(tbName string, identifier string, valIdentifier string) ([]repository.UserData, error) {
+func (s *UserService[T]) Select(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]T, error) {
 	if tbName == "" {
 		return nil, fmt.Errorf("Please provide all required data")
 	}
 
-	tx, startTxErr := s.db.Begin(context.Background())
-	if startTxErr != nil {
-		return nil, fmt.Errorf("failed to begin the transaction")
-	}
+	cxt := context.Background()
 
-	queriedData := s.repo.SqlSelect(tx, tbName, identifier, valIdentifier)
-	if queriedData == nil {
-		rollbackErr := tx.Rollback(context.Background())
+	newTx := dbutil.PrepTx(tx, s.db, cxt)
+
+	// tx, startTxErr := s.db.Begin(context.Background())
+	// if startTxErr != nil {
+	// 	return nil, fmt.Errorf("failed to begin the transaction")
+	// }
+
+	queriedData, queriedErr := s.repo.SqlSelect(newTx, tbName, identifier, valIdentifier)
+	if queriedErr != nil {
+		rollbackErr := newTx.Rollback(context.Background())
 		if rollbackErr != nil {
-			return nil, fmt.Errorf("failed to perform rollback")
+			return nil, fmt.Errorf("failed to perform rollback (%v)", queriedErr.Error())
 		}
-		return nil, fmt.Errorf("failed to perform sql statement")
+		return nil, fmt.Errorf("failed to perform sql statement (%v)", queriedErr.Error())
 	}
 
-	commitErr := tx.Commit(context.Background())
-	if commitErr != nil {
-		return nil, fmt.Errorf("failed to commit the execution")
+	// As now we can retrieve data from getData in repository
+	// as this method not available in current interface we have to do type assertion
+	// if getQueriedData, ok := s.repo.()
+
+	// if queriedData == nil {
+	// 	rollbackErr := newTx.Rollback(context.Background())
+	// 	if rollbackErr != nil {
+	// 		return nil, fmt.Errorf("failed to perform rollback")
+	// 	}
+	// 	return nil, fmt.Errorf("failed to perform sql statement")
+	// }
+
+	finalizeFlag := dbutil.FinalizeTx(tx, newTx, cxt)
+	if !finalizeFlag {
+		return nil, fmt.Errorf("failed to commit transaction by FinalizeTx")
 	}
+
+	// commitErr := tx.Commit(context.Background())
+	// if commitErr != nil {
+	// 	return nil, fmt.Errorf("failed to commit the execution")
+	// }
 	return queriedData, nil
 }
 
-func (s *UserService) Insert(tbName string, colArr []string, valArr []string) error {
+func (s *UserService[T]) Insert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
 	if tbName == "" || len(colArr) == 0 || len(colArr) != len(valArr) {
 		return fmt.Errorf("Please provide enough data to perform execution")
 	}
 
-	tx, startTxErr := s.db.Begin(context.Background())
-	if startTxErr != nil {
-		return fmt.Errorf("failed to begin transaction")
-	}
+	cxt := context.Background()
+	newTx := dbutil.PrepTx(tx, s.db, cxt)
 
-	execErr := s.repo.SqlInsert(tx, tbName, colArr, valArr)
+	// tx, startTxErr := s.db.Begin(context.Background())
+	// if startTxErr != nil {
+	// 	return fmt.Errorf("failed to begin transaction")
+	// }
+
+	execErr := s.repo.SqlInsert(newTx, tbName, colArr, valArr)
 	if execErr != nil {
-		tx.Rollback(context.Background())
+		newTx.Rollback(context.Background())
 		return fmt.Errorf("failed to execute sql statement")
 	}
 
-	commitErr := tx.Commit(context.Background())
-	if commitErr != nil {
-		return fmt.Errorf("failed to commit the execution")
+	finalizeFlag := dbutil.FinalizeTx(tx, newTx, cxt)
+	if !finalizeFlag {
+		return fmt.Errorf("failed to commit the transaction by FinalizeTx")
 	}
+
+	// commitErr := newTx.Commit(context.Background())
+	// if commitErr != nil {
+	// 	return fmt.Errorf("failed to commit the execution")
+	// }
 	return nil
 
 }
 
 // This method allow identifier, If method don't recieved any identifier or valIdentifier, Please put empty string ""
-func (s *UserService) Update(tbName string, colArr []string, identifier string, valIdentitier string) error {
+func (s *UserService[T]) Update(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentitier string) error {
+
+	fmt.Println("update has triggered")
 
 	if tbName == "" || len(colArr) == 0 {
 		return fmt.Errorf("please provide enough data to perform execution")
 	}
 
-	tx, txBeginErr := s.db.Begin(context.Background())
-	if txBeginErr != nil {
-		return fmt.Errorf("transaction failed to start: %v", txBeginErr.Error())
-	}
+	cxt := context.Background()
+	newTx := dbutil.PrepTx(tx, s.db, cxt)
 
-	execErr := s.repo.SqlUpdate(tx, tbName, colArr, identifier, valIdentitier)
+	// tx, txBeginErr := s.db.Begin(context.Background())
+	// if txBeginErr != nil {
+	// 	return fmt.Errorf("transaction failed to start: %v", txBeginErr.Error())
+	// }
+
+	execErr := s.repo.SqlUpdate(newTx, tbName, colArr, colVal, identifier, valIdentitier)
 	if execErr != nil {
-		rollbackErr := tx.Rollback(context.Background())
+		rollbackErr := newTx.Rollback(context.Background())
 		if rollbackErr != nil {
 			return fmt.Errorf("failed to rollback: %v", rollbackErr.Error())
 		}
@@ -93,58 +133,51 @@ func (s *UserService) Update(tbName string, colArr []string, identifier string, 
 		return fmt.Errorf("failed to execute the sql Statement")
 	}
 
-	commitErr := tx.Commit(context.Background())
-	if commitErr != nil {
-		return fmt.Errorf("failed to commit the execution")
+	finalizeFlag := dbutil.FinalizeTx(tx, newTx, cxt)
+	if !finalizeFlag {
+		return fmt.Errorf("failed to commit transaction by FinalizeTx")
 	}
+
+	// commitErr := tx.Commit(context.Background())
+	// if commitErr != nil {
+	// 	return fmt.Errorf("failed to commit the execution")
+	// }
+
 	return nil
 
 }
 
-func (s *UserService) Delete(tbName string, identifier string, valIdentifier string) error {
+func (s *UserService[T]) Delete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
 	if tbName == "" {
 		return fmt.Errorf("Please provide all required data")
 	}
 
-	tx, startTxErr := s.db.Begin(context.Background())
-	if startTxErr != nil {
-		return fmt.Errorf("failed to begin the transaction")
-	}
+	cxt := context.Background()
+	newTx := dbutil.PrepTx(tx, s.db, cxt)
 
-	execErr := s.repo.SqlDelete(tx, tbName, identifier, valIdentifier)
+	// tx, startTxErr := s.db.Begin(context.Background())
+	// if startTxErr != nil {
+	// 	return fmt.Errorf("failed to begin the transaction")
+	// }
+
+	execErr := s.repo.SqlDelete(newTx, tbName, identifier, valIdentifier)
 	if execErr != nil {
-		rollbackErr := tx.Rollback(context.Background())
+		rollbackErr := newTx.Rollback(context.Background())
 		if rollbackErr != nil {
 			return fmt.Errorf("failed to rollback")
 		}
 		return fmt.Errorf("failed to perform sql statement: %v", execErr.Error())
 	}
 
-	commitErr := tx.Commit(context.Background())
-	if commitErr != nil {
-		return fmt.Errorf("failed to commit the execution")
+	finalizeFlag := dbutil.FinalizeTx(tx, newTx, cxt)
+	if !finalizeFlag {
+		return fmt.Errorf("failed to commit the transaction by FinalizeTx")
 	}
 
-	return nil
-
-}
-
-func (s *UserService) SignUp(reqUsername string) error {
-	tx, startTxErr := s.db.Begin(context.Background())
-	if startTxErr != nil {
-		return fmt.Errorf("failed to start transaction")
-	}
-
-	// colArr := []string{"darkmode", "sound", "colorpalettes", "font", "language"}
-
-	s.repo.SqlInsert(
-		tx,
-		"user_setting",
-		[]string{"darkmode", "sound", "colorpalettes", "font", "language"},
-		[]string{"0", "0", "0", "1", "1"},
-	)
-
-	// tx.Exec(context.Background())
+	// commitErr := tx.Commit(context.Background())
+	// if commitErr != nil {
+	// 	return fmt.Errorf("failed to commit the execution")
+	// }
 
 	return nil
 
