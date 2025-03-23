@@ -1,13 +1,12 @@
 package auth
 
 import (
-	// "backend/internal/domain/service"
-	"backend/internal/domain/model"
-	"backend/internal/domain/service"
+	// "profile-portfolio/internal/domain/service"
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"profile-portfolio/internal/domain/model"
+	"profile-portfolio/internal/domain/service"
 	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -15,10 +14,6 @@ import (
 )
 
 var JwtClaimsContextKey ContextKey = "jwtToken"
-
-func newHandler() {
-
-}
 
 type HandleQuery struct {
 	DB         *pgxpool.Pool
@@ -29,15 +24,6 @@ type HandleQuery struct {
 type ReqStruct struct {
 	SettingId int `json:"settingId"`
 }
-
-// type SettingStruct struct {
-// 	SettingId     int `json:"settingid"`
-// 	Darkmode      int `json:"darkmode"`
-// 	Sound         int `json:"sound"`
-// 	Colorpalettes int `json:"colorpalettes"`
-// 	Font          int `json:"font"`
-// 	Language      int `json:"language"`
-// }
 
 func (q *HandleQuery) HandleQuerySetting(w http.ResponseWriter, r *http.Request) {
 	var reqBody = ReqStruct{}
@@ -51,32 +37,6 @@ func (q *HandleQuery) HandleQuerySetting(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "please include settingId for retrieving data", http.StatusBadRequest)
 		return
 	}
-
-	// s.UService.Select()
-
-	// row := s.DB.QueryRow(context.Background(), "SELECT * FROM user_setting WHERE settingid = $1", reqBody.SettingId)
-
-	// var settingidTem int
-	// var darkmodeTem int
-	// var soundTem int
-	// var colorpalettesTem int
-	// var fontTem int
-	// var languageTem int
-
-	// scanErr := row.Scan(&settingidTem, &darkmodeTem, &soundTem, &colorpalettesTem, &fontTem, &languageTem)
-	// if scanErr != nil {
-	// 	http.Error(w, "failed to retrieve data: "+scanErr.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// responseStruct := SettingStruct{
-	// 	SettingId:     settingidTem,
-	// 	Darkmode:      darkmodeTem,
-	// 	Sound:         soundTem,
-	// 	Colorpalettes: colorpalettesTem,
-	// 	Font:          fontTem,
-	// 	Language:      languageTem,
-	// }
 
 	responseStruct, queryErr := q.SettingSvc.Select(nil, "user_setting", "settingid", strconv.Itoa(reqBody.SettingId))
 	if queryErr != nil {
@@ -96,8 +56,6 @@ func (q *HandleQuery) HandleUpdateSetting(w http.ResponseWriter, r *http.Request
 	jwtClaims := r.Context().Value(JwtClaimsContextKey).(jwt.MapClaims)
 	settingId := int(jwtClaims["SettingId"].(float64))
 
-	fmt.Println("HERE THE SETTING ID: " + string(int(settingId)))
-
 	reqSettingUpdate := model.SettingStruct{}
 	decodeReqBodyErr := json.NewDecoder(r.Body).Decode(&reqSettingUpdate)
 	if decodeReqBodyErr != nil {
@@ -111,13 +69,18 @@ func (q *HandleQuery) HandleUpdateSetting(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	colVal := []int{reqSettingUpdate.Darkmode, reqSettingUpdate.Sound, reqSettingUpdate.Colorpalettes, reqSettingUpdate.Font, reqSettingUpdate.Language}
-	// convert into []string{}
+	colVal := []int{
+		reqSettingUpdate.Darkmode,
+		reqSettingUpdate.Sound,
+		reqSettingUpdate.Colorpalettes,
+		reqSettingUpdate.Font,
+		reqSettingUpdate.Language,
+	}
+
 	colValFilter := make([]string, len(colVal))
 	for i := range colValFilter {
 		colValFilter[i] = strconv.Itoa(colVal[i])
 	}
-	fmt.Println(colValFilter)
 
 	updateErr := q.SettingSvc.Update(
 		tx, "user_setting",
@@ -132,6 +95,7 @@ func (q *HandleQuery) HandleUpdateSetting(w http.ResponseWriter, r *http.Request
 			http.Error(w, "failed to update setting", http.StatusInternalServerError)
 			return
 		}
+
 		http.Error(w, "failed to update setting", http.StatusInternalServerError)
 		return
 	}

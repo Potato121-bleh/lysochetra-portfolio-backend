@@ -1,4 +1,5 @@
-module backend
+// module backend
+module profile-portfolio
 
 go 1.22.5
 

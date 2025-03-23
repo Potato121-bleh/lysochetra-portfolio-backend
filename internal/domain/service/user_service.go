@@ -1,8 +1,8 @@
 package service
 
 import (
-	"backend/internal/domain/repository"
-	"backend/internal/util/dbutil"
+	"profile-portfolio/internal/domain/repository"
+	"profile-portfolio/internal/util/dbutil"
 
 	"context"
 	"fmt"
@@ -16,12 +16,6 @@ import (
 // 	SignUp(reqUsername string, reqNickname string, reqPassword string) error
 // }
 
-// The Generic of userService have to match its repository Generic
-//
-//	Example: "if UserRepository[userStruct], then the userService should also be UserService[userStruct]"
-//	NOTE: "Please use NewUserService as it prepare it for you"
-//
-// .
 type UserService[T dbutil.OnlyStruct] struct {
 	db   *pgxpool.Pool
 	repo repository.UserRepository[T]

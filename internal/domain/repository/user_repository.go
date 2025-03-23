@@ -1,10 +1,10 @@
 package repository
 
 import (
-	sqlbuilder "backend/internal/builder/sqlBuilder"
-	"backend/internal/util/dbutil"
 	"context"
 	"fmt"
+	sqlbuilder "profile-portfolio/internal/builder/sqlBuilder"
+	"profile-portfolio/internal/util/dbutil"
 	"time"
 
 	"github.com/jackc/pgx/v5"

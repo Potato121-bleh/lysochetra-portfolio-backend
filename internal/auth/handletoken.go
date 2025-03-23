@@ -1,24 +1,16 @@
 package auth
 
 import (
-	"backend/internal/domain/model"
-	"backend/internal/domain/service"
-	generator "backend/internal/generateKey"
 	"context"
-	"crypto/x509"
-	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
-	"errors"
 	"fmt"
 	"net/http"
-	"os"
+	"profile-portfolio/internal/domain/model"
+	"profile-portfolio/internal/domain/service"
 	"strings"
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 )
 
 var NewUserKey ContextKey = "userinfo"
@@ -30,15 +22,6 @@ type UserRequestInfo struct {
 	Password string `json:"password"`
 }
 
-// type UserData struct {
-// 	Id             int       `json:"userId"`
-// 	Username       string    `json:"userName"`
-// 	Nickname       string    `json:"nickname"`
-// 	Password       string    `json:"password"`
-// 	RegisteredDate time.Time `json:"registered_date"`
-// 	SettingId      int       `json:"settingId"`
-// }
-
 type SignUpUser struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -48,7 +31,8 @@ type SignUpUser struct {
 type AuthHandler struct {
 	DB         *pgxpool.Pool
 	CxtTimeout context.Context
-	Svc        *service.AuthService
+	AuthSvc    *service.AuthService
+	UserSvc    *service.UserService[model.UserData]
 }
 
 func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {
@@ -70,64 +54,13 @@ func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {
 
 func (s *AuthHandler) HandleSigningToken(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("entered 1")
 	userStruct := r.Context().Value(NewUserKey).(model.UserData)
-	fmt.Println("entered 2")
-	//get key
-	loadEnvErrs := godotenv.Load("../.env")
-	if loadEnvErrs != nil {
-		http.Error(w, "failed to load env file", http.StatusInternalServerError)
-		return
-	}
-	base64PrivateKey := os.Getenv("PRIVATE_KEY")
-	if base64PrivateKey == "" {
-		http.Error(w, "failed to load env file", http.StatusInternalServerError)
-		return
-	}
 
-	pemPrivateKey, decodeBase64Err := base64.StdEncoding.DecodeString(base64PrivateKey)
-	if decodeBase64Err != nil {
-		http.Error(w, "failed to decode base64: "+decodeBase64Err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	block, _ := pem.Decode(pemPrivateKey)
-	if block.Type != "RSA PRIVATE KEY" {
-		http.Error(w, "Sigining key not allowed", http.StatusInternalServerError)
-		return
-	}
-
-	privateKey, parsePrivateKeyErr := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if parsePrivateKeyErr != nil {
-		http.Error(w, "failed to parsing key: "+parsePrivateKeyErr.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	genCSRFKey, genCSRFKeyErr := generator.GenerateCSRFKey()
-	if genCSRFKeyErr != nil {
-		http.Error(w, "failed to gen key: "+genCSRFKeyErr.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	jwtClaim := jwt.MapClaims{
-		"Id":        userStruct.Id,
-		"Username":  userStruct.Username,
-		"Password":  userStruct.Password,
-		"Nickname":  userStruct.Nickname,
-		"SettingId": userStruct.SettingId,
-		"CSRFKey":   genCSRFKey,
-		"exp":       jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
-		"iat":       jwt.NewNumericDate(time.Now()),
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwtClaim)
-	jwtSignature, signingJwtErr := token.SignedString(privateKey)
+	jwtSignature, signingJwtErr := s.AuthSvc.SigningToken(userStruct)
 	if signingJwtErr != nil {
 		http.Error(w, "failed to signing jwt token: "+signingJwtErr.Error(), http.StatusUnauthorized)
 		return
 	}
-
-	//domainCookie := os.Getenv("COOKIE_DOMAIN")
 
 	newCookie := http.Cookie{
 		Name:     "auth_token",
@@ -154,7 +87,7 @@ func (s *AuthHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	claims, retrieveClaimsErr := DecodeJWTs(cookie)
+	claims, retrieveClaimsErr := s.AuthSvc.ParseJwt(cookie)
 	if retrieveClaimsErr != nil {
 		http.Error(w, "failed with decodeJWTs func: "+retrieveClaimsErr.Error(), http.StatusUnauthorized)
 		return
@@ -167,8 +100,6 @@ func (s *AuthHandler) HandleVerifyToken(w http.ResponseWriter, r *http.Request) 
 		Password:  claims["Password"].(string),
 		SettingId: int(claims["SettingId"].(float64)),
 	}
-
-	fmt.Println("it already passed data response")
 
 	encodeRespErr := json.NewEncoder(w).Encode(responseClient)
 	if encodeRespErr != nil {
@@ -189,46 +120,9 @@ func (s *AuthHandler) RetrieveCSRFKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwtSign := cookie.Value
-	if jwtSign == "" {
-		http.Error(w, "token not found", http.StatusUnauthorized)
-		return
-	}
-
-	//Get public key
-	loadEnvErr := godotenv.Load("../.env")
-	if loadEnvErr != nil {
-		http.Error(w, "failed to navigate to env: "+loadEnvErr.Error(), http.StatusInternalServerError)
-		return
-	}
-	base64PublicKey := os.Getenv("PUBLIC_KEY")
-	pemPublicKey, convertPemPKErr := base64.StdEncoding.DecodeString(base64PublicKey)
-	if convertPemPKErr != nil {
-		http.Error(w, "convert base64 failed", http.StatusInternalServerError)
-		return
-	}
-
-	jwtblock, _ := pem.Decode(pemPublicKey)
-
-	jwtToken, jwtParsingErr := jwt.Parse(jwtSign, func(t *jwt.Token) (interface{}, error) {
-		if jwtblock.Type != "PUBLIC KEY" {
-			//http.Error("failed to retrieve public key", http.StatusInternalServerError)
-			return nil, errors.New("failed to retrieve public key")
-		}
-		publicKey, x509ParseJwtErr := x509.ParsePKCS1PublicKey(jwtblock.Bytes)
-		if x509ParseJwtErr != nil {
-			return nil, errors.New("failed to retrieve public key")
-		}
-		return publicKey, nil
-	})
-	if jwtParsingErr != nil {
-		http.Error(w, "failed to parse jwt: "+jwtParsingErr.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	jwtClaims, claimsOk := jwtToken.Claims.(jwt.MapClaims)
-	if !claimsOk {
-		http.Error(w, "failed to parse jwt", http.StatusUnauthorized)
+	jwtClaims, parseJwtErr := s.AuthSvc.ParseJwt(cookie)
+	if parseJwtErr != nil {
+		http.Error(w, "failed to parse jwt: "+parseJwtErr.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -282,11 +176,6 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 }
 
 func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
-
-	// repoModel := UserData{}
-	// userRepo := repository.NewRepository("user", repoModel)
-	// userService := service.NewUserService[UserData](s.DB)
-
 	//Validate the CORS
 	reqBody := SignUpUser{}
 	decodeBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
@@ -309,7 +198,6 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	//Check existing user
 	validateUsernameRow := s.DB.QueryRow(context.Background(), "SELECT userid FROM userauth WHERE username = $1", reqBody.Username)
-
 	var validateUsernameVar int
 	scanUsernameErr := validateUsernameRow.Scan(&validateUsernameVar)
 	if scanUsernameErr == nil || validateUsernameVar != 0 {
@@ -319,7 +207,7 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 
 	// As we want to use Signup which not available in original interface we have to come up with type assertion
 	// which allow us to use the extra method outside of assign interface
-	signUpErr := s.Svc.SignUp(tx, reqBody.Username, reqBody.Nickname, reqBody.Password)
+	signUpErr := s.AuthSvc.SignUp(tx, s.UserSvc, reqBody.Username, reqBody.Nickname, reqBody.Password)
 	if signUpErr != nil {
 		rollbackErr := tx.Rollback(context.Background())
 		if rollbackErr != nil {

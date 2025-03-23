@@ -1,9 +1,8 @@
 package service
 
 import (
-	"backend/internal/domain/model"
-	"backend/internal/domain/repository"
-	"backend/internal/util/dbutil"
+	"profile-portfolio/internal/domain/repository"
+	"profile-portfolio/internal/util/dbutil"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -15,14 +14,6 @@ import (
 // 	Delete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
 // }
 
-// db   *pgxpool.Pool
-// repo repository.UserRepoI
-
-// This method prepare you a well structured UserService where it use the model as you provide
-//
-//	Note: "This UserService are using UserRepository"
-//
-// .
 func NewUserService[T dbutil.OnlyStruct](db *pgxpool.Pool) *UserService[T] {
 	return &UserService[T]{
 		db:   db,
@@ -31,11 +22,7 @@ func NewUserService[T dbutil.OnlyStruct](db *pgxpool.Pool) *UserService[T] {
 }
 
 func NewAuthService(db *pgxpool.Pool) *AuthService {
-	// userSvc := NewUserService[model.UserData](db)
-	// settingSvc := NewUserService[model.SettingStruct](db)
 	return &AuthService{
-		db:         db,
-		userSvc:    NewUserService[model.UserData](db),
-		settingSvc: NewUserService[model.SettingStruct](db),
+		db: db,
 	}
 }

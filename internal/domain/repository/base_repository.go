@@ -1,6 +1,6 @@
 package repository
 
-import "backend/internal/util/dbutil"
+import "profile-portfolio/internal/util/dbutil"
 
 // type RepoI interface {
 // 	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error

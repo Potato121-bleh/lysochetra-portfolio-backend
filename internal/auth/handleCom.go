@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Not use anymore we use service instead
 func DecodeJWTs(cookie *http.Cookie) (jwt.MapClaims, error) {
 
 	//retrieve the public key

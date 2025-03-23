@@ -1,15 +1,15 @@
 package main
 
 import (
-	"backend/internal/auth"
-	// "backend/internal/domain/repository"
-	"backend/internal/domain/model"
-	"backend/internal/domain/service"
-	"backend/internal/middleware"
+	"profile-portfolio/internal/auth"
+	// "profile-portfolio/internal/domain/repository"
 	"context"
 	"log"
 	"net/http"
 	"os"
+	"profile-portfolio/internal/domain/model"
+	"profile-portfolio/internal/domain/service"
+	"profile-portfolio/internal/middleware"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -50,12 +50,11 @@ func main() {
 
 	muxhandler := mux.NewRouter()
 
-	// userRepo := repository.NewRepository("user")
 	userSvc := service.NewUserService[model.UserData](db)
 	settingSvc := service.NewUserService[model.SettingStruct](db)
 	authSvc := service.NewAuthService(db)
 
-	authHandlers := &auth.AuthHandler{DB: db, CxtTimeout: cxtTimeout, Svc: authSvc}
+	authHandlers := &auth.AuthHandler{DB: db, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}
 	handleQuerys := &auth.HandleQuery{DB: db, UserSvc: userSvc, SettingSvc: settingSvc}
 
 	muxhandler.HandleFunc("/user/auth",
@@ -81,7 +80,6 @@ func main() {
 	muxhandler.HandleFunc("/testing-for-cookie/{username}/{password}",
 		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.Handletesting, db))).Methods("GET", "OPTIONS")
 
-	//we passed in only handler with ServeHTTP
 	http.ListenAndServe(":5000", muxhandler)
 
 }

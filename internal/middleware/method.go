@@ -1,10 +1,10 @@
 package middleware
 
 import (
-	"backend/internal/auth"
 	"context"
 	"crypto/x509"
 	"encoding/base64"
+	"profile-portfolio/internal/auth"
 
 	"encoding/json"
 	"encoding/pem"
@@ -15,10 +15,9 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
-	//"github.com/gorilla/mux"
 
-	"backend/internal/domain/model"
-	"backend/internal/domain/service"
+	"profile-portfolio/internal/domain/model"
+	"profile-portfolio/internal/domain/service"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
@@ -30,16 +29,6 @@ type UserRequestInfo struct {
 	Password string `json:"password"`
 }
 
-/*
-type userData struct {
-	Id        int    `json:"userId"`
-	Username  string `json:"userName"`
-	Password  string `json:"password"`
-	Nickname  string `json:"nickname"`
-	SettingId int    `json:"settingId"`
-}
-*/
-
 func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
@@ -48,12 +37,6 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
-		/*
-			urlVars := mux.Vars(r)
-			urlUsername := urlVars["username"]
-			urlPassword := urlVars["password"]
-		*/
-
 		var reqBody UserRequestInfo
 		decodeBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
 		if decodeBodyErr != nil {
@@ -61,25 +44,7 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
-		//fetch user from db
-
-		//fetchedRow := db.QueryRow(context.Background(), "SELECT * FROM userauth WHERE LOWER(username) = $1", strings.ToLower(reqBody.Username))
-
-		// userRepository := repository.NewUserRepository[auth.UserData]()
 		userService := service.NewUserService[model.UserData](db)
-
-		// fetchedRow := db.QueryRow(context.Background(), "SELECT * FROM userauth WHERE LOWER(username) = $1", strings.ToLower(reqBody.Username))
-
-		// var useridTem int
-		// var usernameTem string
-		// var userpasswordTem string
-		// var usernicknameTem string
-		// var usersettingidTem int
-		// scannedRowErr := fetchedRow.Scan(&useridTem, &usernameTem, &usernicknameTem, &userpasswordTem, nil, &usersettingidTem)
-		// if scannedRowErr != nil {
-		// 	http.Error(w, "User not found: "+scannedRowErr.Error(), http.StatusUnauthorized)
-		// 	return
-		// }
 
 		queriedData, queriedDataErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
 		if queriedDataErr != nil {
@@ -114,14 +79,11 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 func MiddlewareCORSValidate(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		//Get origin from env
-
 		loadingEnvErr := godotenv.Load("../.env")
 		if loadingEnvErr != nil {
 			http.Error(w, "failed to load env: "+loadingEnvErr.Error(), http.StatusInternalServerError)
 			return
 		}
-		//checking for preflight
 
 		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_ORIGIN"))
 		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PATCH")
@@ -137,9 +99,11 @@ func MiddlewareCORSValidate(nextHandler http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// X-CSRF-Token
 func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		authSvc := service.AuthService{}
+
 		//First we have to check CSRF in header first to check if it not we rejected
 		csrfHeaderToken := r.Header.Get("X-CSRF-Token")
 		if csrfHeaderToken == "" {
@@ -154,7 +118,7 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		jwtClaims, decodeJwtErr := auth.DecodeJWTs(cookie)
+		jwtClaims, decodeJwtErr := authSvc.ParseJwt(cookie)
 		if decodeJwtErr != nil {
 			http.Error(w, "failed to decode jwt token: "+decodeJwtErr.Error(), http.StatusUnauthorized)
 			return
