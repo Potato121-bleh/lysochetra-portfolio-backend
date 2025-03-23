@@ -1,4 +1,4 @@
-package auth
+package application
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -55,7 +54,6 @@ func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {
 func (s *AuthHandler) HandleSigningToken(w http.ResponseWriter, r *http.Request) {
 
 	userStruct := r.Context().Value(NewUserKey).(model.UserData)
-
 	jwtSignature, signingJwtErr := s.AuthSvc.SigningToken(userStruct)
 	if signingJwtErr != nil {
 		http.Error(w, "failed to signing jwt token: "+signingJwtErr.Error(), http.StatusUnauthorized)
@@ -131,47 +129,6 @@ func (s *AuthHandler) RetrieveCSRFKey(w http.ResponseWriter, r *http.Request) {
 	if writeRespErr != nil {
 		http.Error(w, "failed to response", http.StatusInternalServerError)
 		return
-	}
-}
-
-func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		var reqBody UserRequestInfo
-		decodeBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
-		if decodeBodyErr != nil {
-			http.Error(w, "Failed to validate your request: "+decodeBodyErr.Error(), http.StatusBadRequest)
-			return
-		}
-
-		// userRepo := repository.NewRepository("user", UserData{})
-		userService := service.NewUserService[model.UserData](db)
-		queriedUser, queriedErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
-		if queriedErr != nil || len(queriedUser) != 1 {
-			http.Error(w, "failed to queried user from db", http.StatusUnauthorized)
-			return
-		}
-
-		if queriedUser[0].Password != reqBody.Password {
-			http.Error(w, "failed to authenticate user", http.StatusUnauthorized)
-			return
-		}
-
-		//create context to pass the data to actual handler
-		newUser := model.UserData{Id: queriedUser[0].Id,
-			Username:  queriedUser[0].Username,
-			Password:  queriedUser[0].Password,
-			Nickname:  queriedUser[0].Nickname,
-			SettingId: queriedUser[0].SettingId,
-		}
-		cxtWithData := context.WithValue(r.Context(), NewUserKey, newUser)
-
-		nextHandler(w, r.WithContext(cxtWithData))
 	}
 }
 

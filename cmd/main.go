@@ -1,7 +1,9 @@
 package main
 
 import (
-	"profile-portfolio/internal/auth"
+	"profile-portfolio/internal/application"
+	// "profile-portfolio/internal/auth"
+
 	// "profile-portfolio/internal/domain/repository"
 	"context"
 	"log"
@@ -54,8 +56,8 @@ func main() {
 	settingSvc := service.NewUserService[model.SettingStruct](db)
 	authSvc := service.NewAuthService(db)
 
-	authHandlers := &auth.AuthHandler{DB: db, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}
-	handleQuerys := &auth.HandleQuery{DB: db, UserSvc: userSvc, SettingSvc: settingSvc}
+	authHandlers := &application.AuthHandler{DB: db, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}
+	handleQuerys := &application.SettingHandler{DB: db, UserSvc: userSvc, SettingSvc: settingSvc}
 
 	muxhandler.HandleFunc("/user/auth",
 		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.HandleSigningToken, db))).Methods("OPTIONS", "POST")

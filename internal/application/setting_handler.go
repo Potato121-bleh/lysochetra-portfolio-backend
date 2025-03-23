@@ -1,4 +1,4 @@
-package auth
+package application
 
 import (
 	// "profile-portfolio/internal/domain/service"
@@ -15,7 +15,7 @@ import (
 
 var JwtClaimsContextKey ContextKey = "jwtToken"
 
-type HandleQuery struct {
+type SettingHandler struct {
 	DB         *pgxpool.Pool
 	UserSvc    *service.UserService[model.UserData]
 	SettingSvc *service.UserService[model.SettingStruct]
@@ -25,7 +25,7 @@ type ReqStruct struct {
 	SettingId int `json:"settingId"`
 }
 
-func (q *HandleQuery) HandleQuerySetting(w http.ResponseWriter, r *http.Request) {
+func (q *SettingHandler) HandleQuerySetting(w http.ResponseWriter, r *http.Request) {
 	var reqBody = ReqStruct{}
 	reqBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
 	if reqBodyErr != nil {
@@ -52,7 +52,7 @@ func (q *HandleQuery) HandleQuerySetting(w http.ResponseWriter, r *http.Request)
 }
 
 // This update func will work when you request with all data such as every field of setting except settingId
-func (q *HandleQuery) HandleUpdateSetting(w http.ResponseWriter, r *http.Request) {
+func (q *SettingHandler) HandleUpdateSetting(w http.ResponseWriter, r *http.Request) {
 	jwtClaims := r.Context().Value(JwtClaimsContextKey).(jwt.MapClaims)
 	settingId := int(jwtClaims["SettingId"].(float64))
 

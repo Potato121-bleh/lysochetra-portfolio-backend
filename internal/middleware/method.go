@@ -4,11 +4,10 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
-	"profile-portfolio/internal/auth"
+	"fmt"
 
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 
 	"net/http"
 	"os"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"profile-portfolio/internal/application"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
 
@@ -44,33 +44,28 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
+		// userRepo := repository.NewRepository("user", UserData{})
 		userService := service.NewUserService[model.UserData](db)
-
-		queriedData, queriedDataErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
-		if queriedDataErr != nil {
-			http.Error(w, "failed to queried user from database: "+queriedDataErr.Error(), http.StatusInternalServerError)
+		queriedUser, queriedErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
+		if queriedErr != nil || len(queriedUser) != 1 {
+			http.Error(w, "failed to queried user from db", http.StatusUnauthorized)
 			return
 		}
 
-		// Since we use identifier we have to use the first element
-		fmt.Println(queriedData)
-		fmt.Println("----------")
-		fmt.Println(queriedData[0].Password)
-		fmt.Println(reqBody.Password)
-		if queriedData[0].Password != reqBody.Password {
+		if queriedUser[0].Password != reqBody.Password {
 			http.Error(w, "failed to authenticate user", http.StatusUnauthorized)
 			return
 		}
 
 		//create context to pass the data to actual handler
-		newUser := model.UserData{Id: queriedData[0].Id,
-			Username:  queriedData[0].Username,
-			Password:  queriedData[0].Password,
-			Nickname:  queriedData[0].Nickname,
-			SettingId: queriedData[0].SettingId}
-		cxtWithData := context.WithValue(r.Context(), auth.NewUserKey, newUser)
-
-		fmt.Println("it passed here")
+		newUser := model.UserData{Id: queriedUser[0].Id,
+			Username:  queriedUser[0].Username,
+			Password:  queriedUser[0].Password,
+			Nickname:  queriedUser[0].Nickname,
+			SettingId: queriedUser[0].SettingId,
+		}
+		fmt.Println(newUser)
+		cxtWithData := context.WithValue(r.Context(), application.NewUserKey, newUser)
 
 		nextHandler(w, r.WithContext(cxtWithData))
 	}
@@ -132,7 +127,7 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		claimsContext := context.WithValue(r.Context(), auth.JwtClaimsContextKey, jwtClaims)
+		claimsContext := context.WithValue(r.Context(), application.JwtClaimsContextKey, jwtClaims)
 
 		nextHandler(w, r.WithContext(claimsContext))
 
