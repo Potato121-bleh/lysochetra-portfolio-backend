@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+
 	sqlbuilder "profile-portfolio/internal/builder/sqlBuilder"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/util/dbutil"
@@ -96,53 +97,27 @@ func (r *SettingRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string,
 	}
 
 	sqlStatement := builder.AddTable(tbName).AddColumn(colArr)
-	fmt.Println(valArr)
 
 	valArrI := make([]interface{}, len(valArr))
 	for i, v := range valArr {
 		valArrI[i] = v
 	}
 
-	fmt.Println(sqlStatement.Build())
-	fmt.Println("the value of field: ")
-	fmt.Println(colArr)
-	fmt.Println(valArrI)
-
 	insertUserCommandTag, insertUserErr := tx.Exec(context.Background(), sqlStatement.Build(), valArrI...)
 	if insertUserErr != nil || insertUserCommandTag.RowsAffected() != 1 {
 		return fmt.Errorf("failed to execute sql statement: %v", insertUserErr.Error())
 	}
-
-	// commitTranErr := tx.Commit(context.Background())
-	// if commitTranErr != nil {
-	// 	tx.Rollback(context.Background())
-	// 	return false
-	// }
 
 	return nil
 }
 
 func (r *SettingRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
 
-	fmt.Println("sql update has triggered")
-
-	// unknown error?
 	builder := sqlbuilder.NewSqlBuilder("update")
-	fmt.Println("passed level 1")
-	fmt.Println(builder)
 	if builder == nil {
-		fmt.Println("it triggered error")
 		return fmt.Errorf("failed to start the builder")
 	}
 
-	// colValI := make([]interface{}, len(colVal))
-	// fmt.Println("passed level 2")
-	// for i, v := range colVal {
-	// 	colValI[i] = v
-	// }
-
-	fmt.Println("passed level 3")
-	fmt.Println(colArr)
 	sqlStatement := builder.AddTable(tbName).AddColumn(colArr)
 	if identifier != "" {
 		sqlStatement.AddIdentifier(identifier)
@@ -150,27 +125,14 @@ func (r *SettingRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string,
 	}
 
 	colValI := make([]interface{}, len(colVal))
-	fmt.Println("passed level 2")
 	for i, v := range colVal {
 		colValI[i] = v
 	}
-	// else {
-	// 	return fmt.Errorf("failed to perform sql transaction, Please input the required column value")
-	// }
-
-	fmt.Println(sqlStatement.Build())
-	fmt.Println(colValI)
 
 	updateUserCommandTag, updateUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), colValI...)
 	if updateUseridErr != nil || updateUserCommandTag.RowsAffected() != 1 {
 		return fmt.Errorf("failed to perform sql transaction")
 	}
-
-	// commitTranErr := tx.Commit(context.Background())
-	// if commitTranErr != nil {
-	// 	tx.Rollback(context.Background())
-	// 	return false
-	// }
 
 	return nil
 }

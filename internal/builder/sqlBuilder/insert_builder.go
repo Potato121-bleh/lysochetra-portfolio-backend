@@ -1,7 +1,6 @@
 package sqlbuilder
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -27,15 +26,11 @@ func (s *insertSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	for i := 0; i < len(colArr); i++ {
 		prepStatement += " " + colArr[i] + " ,"
 	}
-	fmt.Println("Before split: ")
-	fmt.Println(prepStatement)
 	prepStatementArr := strings.Split(prepStatement, " ")
 	prepStatementformatted := strings.Join(
 		prepStatementArr[:len(prepStatementArr)-1],
 		" ")
-	fmt.Println(prepStatementArr[:len(prepStatementArr)-1])
 	prepStatementformatted += " ) "
-	fmt.Println(prepStatementformatted)
 	s.col = prepStatementformatted
 	return s
 }
@@ -59,9 +54,5 @@ func (s *insertSqlBuilder) Build() string {
 	prepStatement += " )"
 
 	return prepStatement
-
-	// colArr := []string{"userName", "userId"}
-	// col := "(userName, userId)"
-	// tbName := "mytable"
 
 }

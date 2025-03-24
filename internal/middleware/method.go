@@ -21,13 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
-	"github.com/pkg/errors"
 )
-
-type UserRequestInfo struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
 
 func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -37,14 +31,13 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
-		var reqBody UserRequestInfo
+		var reqBody model.UserData
 		decodeBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
 		if decodeBodyErr != nil {
 			http.Error(w, "Failed to validate your request: "+decodeBodyErr.Error(), http.StatusBadRequest)
 			return
 		}
 
-		// userRepo := repository.NewRepository("user", UserData{})
 		userService := service.NewUserService(db)
 		queriedUser, queriedErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
 		if queriedErr != nil || len(queriedUser) != 1 {
@@ -57,14 +50,12 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 			return
 		}
 
-		//create context to pass the data to actual handler
 		newUser := model.UserData{Id: queriedUser[0].Id,
 			Username:  queriedUser[0].Username,
 			Password:  queriedUser[0].Password,
 			Nickname:  queriedUser[0].Nickname,
 			SettingId: queriedUser[0].SettingId,
 		}
-		fmt.Println(newUser)
 		cxtWithData := context.WithValue(r.Context(), application.NewUserKey, newUser)
 
 		nextHandler(w, r.WithContext(cxtWithData))
@@ -99,14 +90,12 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 
 		authSvc := service.AuthService{}
 
-		//First we have to check CSRF in header first to check if it not we rejected
 		csrfHeaderToken := r.Header.Get("X-CSRF-Token")
 		if csrfHeaderToken == "" {
 			http.Error(w, "no CSRF token found", http.StatusUnauthorized)
 			return
 		}
 
-		//Second we have to decode the jwt token to get an actual code inside of it.
 		cookie, retrieveTokenErr := r.Cookie("auth_token")
 		if retrieveTokenErr != nil {
 			http.Error(w, "failed to retrieve the cookie", http.StatusUnauthorized)
@@ -121,7 +110,6 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 
 		csrfJWTToken := jwtClaims["CSRFKey"].(string)
 
-		//Check whether the two is correct or not
 		if csrfHeaderToken != csrfJWTToken {
 			http.Error(w, "failed to validate the credential, due to CSRF purposes", http.StatusUnauthorized)
 			return
@@ -136,38 +124,37 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 
 func DecodeJWTss(cookie *http.Cookie) (jwt.MapClaims, error) {
 
-	//retrieve the public key
 	loadEnvErr := godotenv.Load("../.env")
 	if loadEnvErr != nil {
-		return nil, errors.New("failed to load env file")
+		return nil, fmt.Errorf("failed to load env file")
 	}
 
 	pemPKformat, pemPKformatErr := base64.StdEncoding.DecodeString(os.Getenv("PUBLIC_KEY"))
 	if pemPKformatErr != nil {
-		return nil, errors.New("failed to decode base64 cookie")
+		return nil, fmt.Errorf("failed to decode base64 cookie")
 	}
 
 	pemBlock, _ := pem.Decode(pemPKformat)
 	publicKey, parsingPKErr := x509.ParsePKCS1PublicKey(pemBlock.Bytes)
 	if parsingPKErr != nil {
-		return nil, errors.New("failed to parse PK")
+		return nil, fmt.Errorf("failed to parse PK")
 	}
 
 	jwtToken, parseJwtErr := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
 		if pemBlock.Type != "PUBLIC KEY" {
-			return nil, errors.New("RSA key type not allowed")
+			return nil, fmt.Errorf("RSA key type not allowed")
 		}
 		if token.Method.(*jwt.SigningMethodRSA) != jwt.SigningMethodRS256 {
-			return nil, errors.New("algorithm of jwt is not allowed")
+			return nil, fmt.Errorf("algorithm of jwt is not allowed")
 		}
 		return publicKey, nil
 	})
 	if parseJwtErr != nil {
-		return nil, errors.New(parseJwtErr.Error())
+		return nil, fmt.Errorf(parseJwtErr.Error())
 	}
 
 	if !jwtToken.Valid {
-		return nil, errors.New("token invalid, can be expired")
+		return nil, fmt.Errorf("token invalid, can be expired")
 	}
 
 	jwtClaim := jwtToken.Claims.(jwt.MapClaims)

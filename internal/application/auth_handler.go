@@ -16,17 +16,6 @@ var NewUserKey ContextKey = "userinfo"
 
 type ContextKey string
 
-type UserRequestInfo struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type SignUpUser struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Nickname string `json:"nickname"`
-}
-
 type AuthHandler struct {
 	DB         *pgxpool.Pool
 	CxtTimeout context.Context
@@ -134,14 +123,13 @@ func (s *AuthHandler) RetrieveCSRFKey(w http.ResponseWriter, r *http.Request) {
 
 func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 	//Validate the CORS
-	reqBody := SignUpUser{}
+	reqBody := model.UserData{}
 	decodeBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
 	if decodeBodyErr != nil {
 		http.Error(w, "failed to read request body: "+decodeBodyErr.Error(), http.StatusBadRequest)
 		return
 	}
 
-	//Begin transaction
 	tx, startTxErr := s.DB.Begin(context.Background())
 	if startTxErr != nil {
 		http.Error(w, "failed to start transaction: "+startTxErr.Error(), http.StatusInternalServerError)
@@ -153,7 +141,6 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//Check existing user
 	validateUsernameRow := s.DB.QueryRow(context.Background(), "SELECT userid FROM userauth WHERE username = $1", reqBody.Username)
 	var validateUsernameVar int
 	scanUsernameErr := validateUsernameRow.Scan(&validateUsernameVar)
@@ -162,8 +149,6 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// As we want to use Signup which not available in original interface we have to come up with type assertion
-	// which allow us to use the extra method outside of assign interface
 	signUpErr := s.AuthSvc.SignUp(tx, s.UserSvc, reqBody.Username, reqBody.Nickname, reqBody.Password)
 	if signUpErr != nil {
 		rollbackErr := tx.Rollback(context.Background())

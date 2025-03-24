@@ -18,15 +18,11 @@ var JwtClaimsContextKey ContextKey = "jwtToken"
 type SettingHandler struct {
 	DB         *pgxpool.Pool
 	UserSvc    service.UserServiceI
-	SettingSvc service.SettingServiceI // we change this to settingService
-}
-
-type ReqStruct struct {
-	SettingId int `json:"settingId"`
+	SettingSvc service.SettingServiceI
 }
 
 func (q *SettingHandler) HandleQuerySetting(w http.ResponseWriter, r *http.Request) {
-	var reqBody = ReqStruct{}
+	var reqBody = model.UserData{}
 	reqBodyErr := json.NewDecoder(r.Body).Decode(&reqBody)
 	if reqBodyErr != nil {
 		http.Error(w, "failed to decode request: "+reqBodyErr.Error(), http.StatusBadRequest)

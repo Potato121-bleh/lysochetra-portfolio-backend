@@ -3,7 +3,6 @@ package sqlbuilder
 import "strings"
 
 type selectSqlbuilder struct {
-	// sqlStatement string
 	col        string
 	tbName     string
 	identifier string

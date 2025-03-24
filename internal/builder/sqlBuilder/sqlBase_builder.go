@@ -7,14 +7,6 @@ type SqlBuilderI interface {
 	Build() string
 }
 
-// type SqlBuilderArgs struct {
-// 	tbName        string
-// 	colArr        []string
-// 	valArr        []string
-// 	identifier    string
-// 	valIdentifier string
-// }
-
 func NewSqlBuilder(builderName string) SqlBuilderI {
 	switch builderName {
 	case "select":
