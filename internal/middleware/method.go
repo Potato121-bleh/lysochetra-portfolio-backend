@@ -45,7 +45,7 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 		}
 
 		// userRepo := repository.NewRepository("user", UserData{})
-		userService := service.NewUserService[model.UserData](db)
+		userService := service.NewUserService(db)
 		queriedUser, queriedErr := userService.Select(nil, "userauth", "LOWER(username)", strings.ToLower(reqBody.Username))
 		if queriedErr != nil || len(queriedUser) != 1 {
 			http.Error(w, "failed to queried user from db", http.StatusUnauthorized)

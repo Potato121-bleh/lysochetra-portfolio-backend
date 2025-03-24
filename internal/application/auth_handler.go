@@ -30,8 +30,8 @@ type SignUpUser struct {
 type AuthHandler struct {
 	DB         *pgxpool.Pool
 	CxtTimeout context.Context
-	AuthSvc    *service.AuthService
-	UserSvc    *service.UserService[model.UserData]
+	AuthSvc    service.AuthServiceI
+	UserSvc    service.UserServiceI
 }
 
 func (s *AuthHandler) Handletesting(w http.ResponseWriter, r *http.Request) {

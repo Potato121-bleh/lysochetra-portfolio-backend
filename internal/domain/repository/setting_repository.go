@@ -10,22 +10,21 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type UserRepository struct {
-	//db *pgxpool.Pool
+type SettingRepository struct {
 }
 
-type UserRepositoryI interface {
-	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error)
+type SettingRepositoryI interface {
+	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error)
 	SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error
 	SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error
 	SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
 }
 
-func NewUserRepository() UserRepositoryI {
-	return &UserRepository{}
+func NewSettingRepository() SettingRepositoryI {
+	return &SettingRepository{}
 }
 
-func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error) {
+func (r *SettingRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error) {
 	builder := sqlbuilder.NewSqlBuilder("select")
 	if builder == nil {
 		return nil, fmt.Errorf("failed to start the builder")
@@ -42,7 +41,7 @@ func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, 
 		return nil, fmt.Errorf("failed to execute transaction")
 	}
 
-	responseData := []model.UserData{}
+	responseData := []model.SettingStruct{}
 
 	for rows.Next() {
 
@@ -53,7 +52,7 @@ func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, 
 		// t := reflect.TypeOf(new(T)).Elem()
 		// tPtr := reflect.New(t).Elem()
 		// newStructInstance := tPtr.Interface().(T)
-		newPrepInstance := model.UserData{}
+		newPrepInstance := model.SettingStruct{}
 
 		scanErr := dbutil.ScanRow(rows, &newPrepInstance)
 		if scanErr != nil {
@@ -90,7 +89,7 @@ func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, 
 
 }
 
-func (r *UserRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
+func (r *SettingRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
 	builder := sqlbuilder.NewSqlBuilder("insert")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -123,7 +122,7 @@ func (r *UserRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, va
 	return nil
 }
 
-func (r *UserRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
+func (r *SettingRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
 
 	fmt.Println("sql update has triggered")
 
@@ -176,7 +175,7 @@ func (r *UserRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, co
 	return nil
 }
 
-func (r *UserRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
+func (r *SettingRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
 	builder := sqlbuilder.NewSqlBuilder("delete")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -195,7 +194,3 @@ func (r *UserRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, 
 
 	return nil
 }
-
-// func (r *UserRepository[T]) getData() []T {
-// 	return r.queriedData
-// }

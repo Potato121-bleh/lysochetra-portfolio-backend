@@ -16,11 +16,23 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type AuthServiceI interface {
+	SignUp(tx pgx.Tx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error
+	SigningToken(userStruct model.UserData) (string, error)
+	ParseJwt(cookie *http.Cookie) (jwt.MapClaims, error)
+}
+
 type AuthService struct {
 	db *pgxpool.Pool
 }
 
-func (s *AuthService) SignUp(tx pgx.Tx, userSvc *UserService[model.UserData], reqUsername string, reqNickname string, reqPassword string) error {
+func NewAuthService(db *pgxpool.Pool) AuthServiceI {
+	return &AuthService{
+		db: db,
+	}
+}
+
+func (s *AuthService) SignUp(tx pgx.Tx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error {
 
 	// we insert setting, and query id from setting
 	newSettingRow := tx.QueryRow(context.Background(), "INSERT INTO user_setting (darkmode, sound, colorpalettes, font, language) VALUES (0, 0, 0, 1, 1)	RETURNING settingid")

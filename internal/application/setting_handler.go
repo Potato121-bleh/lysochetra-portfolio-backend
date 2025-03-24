@@ -17,8 +17,8 @@ var JwtClaimsContextKey ContextKey = "jwtToken"
 
 type SettingHandler struct {
 	DB         *pgxpool.Pool
-	UserSvc    *service.UserService[model.UserData]
-	SettingSvc *service.UserService[model.SettingStruct]
+	UserSvc    service.UserServiceI
+	SettingSvc service.SettingServiceI // we change this to settingService
 }
 
 type ReqStruct struct {

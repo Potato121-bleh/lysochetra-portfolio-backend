@@ -1,6 +1,6 @@
 package repository
 
-import "profile-portfolio/internal/util/dbutil"
+// import "profile-portfolio/internal/util/dbutil"
 
 // type RepoI interface {
 // 	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
@@ -10,6 +10,6 @@ import "profile-portfolio/internal/util/dbutil"
 // }
 
 // This factory are returning UserRepository and using your provided Generic as model.
-func NewUserRepository[T dbutil.OnlyStruct]() *UserRepository[T] {
-	return &UserRepository[T]{}
-}
+// func NewUserRepository[T dbutil.OnlyStruct]() *UserRepository[T] {
+// 	return &UserRepository[T]{}
+// }

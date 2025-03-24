@@ -9,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
 	"profile-portfolio/internal/middleware"
 	"time"
@@ -52,8 +51,8 @@ func main() {
 
 	muxhandler := mux.NewRouter()
 
-	userSvc := service.NewUserService[model.UserData](db)
-	settingSvc := service.NewUserService[model.SettingStruct](db)
+	userSvc := service.NewUserService(db)
+	settingSvc := service.NewSettingService(db)
 	authSvc := service.NewAuthService(db)
 
 	authHandlers := &application.AuthHandler{DB: db, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}

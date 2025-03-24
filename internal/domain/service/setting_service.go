@@ -12,27 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// SignUp(reqUsername string, reqNickname string, reqPassword string) error
-type UserServiceI interface {
-	Select(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error)
+type SettingServiceI interface {
+	Select(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error)
 	Insert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error
 	Update(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentitier string) error
 	Delete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
 }
 
-type UserService struct {
+type SettingService struct {
 	db   *pgxpool.Pool
-	repo repository.UserRepository
+	repo repository.SettingRepository
 }
 
-func NewUserService(db *pgxpool.Pool) UserServiceI {
-	return &UserService{
+func NewSettingService(db *pgxpool.Pool) SettingServiceI {
+	return &SettingService{
 		db:   db,
-		repo: repository.UserRepository{},
+		repo: repository.SettingRepository{},
 	}
 }
 
-func (s *UserService) Select(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error) {
+func (s *SettingService) Select(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error) {
 	if tbName == "" {
 		return nil, fmt.Errorf("Please provide all required data")
 	}
@@ -79,7 +78,7 @@ func (s *UserService) Select(tx pgx.Tx, tbName string, identifier string, valIde
 	return queriedData, nil
 }
 
-func (s *UserService) Insert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
+func (s *SettingService) Insert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
 	if tbName == "" || len(colArr) == 0 || len(colArr) != len(valArr) {
 		return fmt.Errorf("Please provide enough data to perform execution")
 	}
@@ -112,7 +111,7 @@ func (s *UserService) Insert(tx pgx.Tx, tbName string, colArr []string, valArr [
 }
 
 // This method allow identifier, If method don't recieved any identifier or valIdentifier, Please put empty string ""
-func (s *UserService) Update(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentitier string) error {
+func (s *SettingService) Update(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentitier string) error {
 
 	fmt.Println("update has triggered")
 
@@ -152,7 +151,7 @@ func (s *UserService) Update(tx pgx.Tx, tbName string, colArr []string, colVal [
 
 }
 
-func (s *UserService) Delete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
+func (s *SettingService) Delete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
 	if tbName == "" {
 		return fmt.Errorf("Please provide all required data")
 	}
