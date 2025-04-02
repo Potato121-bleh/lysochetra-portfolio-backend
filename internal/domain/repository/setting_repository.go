@@ -5,27 +5,26 @@ import (
 	"fmt"
 
 	sqlbuilder "profile-portfolio/internal/builder/sqlBuilder"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/util/dbutil"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type SettingRepository struct {
 }
 
 type SettingRepositoryI interface {
-	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error)
-	SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error
-	SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error
-	SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
+	SqlSelect(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error)
+	SqlInsert(tx db.DatabaseTx, tbName string, colArr []string, valArr []string) error
+	SqlUpdate(tx db.DatabaseTx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error
+	SqlDelete(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) error
 }
 
 func NewSettingRepository() SettingRepositoryI {
 	return &SettingRepository{}
 }
 
-func (r *SettingRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error) {
+func (r *SettingRepository) SqlSelect(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) ([]model.SettingStruct, error) {
 	builder := sqlbuilder.NewSqlBuilder("select")
 	if builder == nil {
 		return nil, fmt.Errorf("failed to start the builder")
@@ -90,7 +89,7 @@ func (r *SettingRepository) SqlSelect(tx pgx.Tx, tbName string, identifier strin
 
 }
 
-func (r *SettingRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
+func (r *SettingRepository) SqlInsert(tx db.DatabaseTx, tbName string, colArr []string, valArr []string) error {
 	builder := sqlbuilder.NewSqlBuilder("insert")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -103,15 +102,20 @@ func (r *SettingRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string,
 		valArrI[i] = v
 	}
 
-	insertUserCommandTag, insertUserErr := tx.Exec(context.Background(), sqlStatement.Build(), valArrI...)
-	if insertUserErr != nil || insertUserCommandTag.RowsAffected() != 1 {
-		return fmt.Errorf("failed to execute sql statement: %v", insertUserErr.Error())
-	}
+	insertSettingCommandTag, insertSettingErr := tx.Exec(context.Background(), sqlStatement.Build(), valArrI...)
 
+	rowAffected := insertSettingCommandTag.RowsAffected()
+	if insertSettingErr != nil || rowAffected != 1 {
+		errStr := "failed to execute sql statement"
+		if insertSettingErr != nil {
+			errStr += ": " + insertSettingErr.Error()
+		}
+		return fmt.Errorf(errStr)
+	}
 	return nil
 }
 
-func (r *SettingRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
+func (r *SettingRepository) SqlUpdate(tx db.DatabaseTx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
 
 	builder := sqlbuilder.NewSqlBuilder("update")
 	if builder == nil {
@@ -129,15 +133,15 @@ func (r *SettingRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string,
 		colValI[i] = v
 	}
 
-	updateUserCommandTag, updateUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), colValI...)
-	if updateUseridErr != nil || updateUserCommandTag.RowsAffected() != 1 {
+	_, updateUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), colValI...)
+	if updateUseridErr != nil {
 		return fmt.Errorf("failed to perform sql transaction")
 	}
 
 	return nil
 }
 
-func (r *SettingRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
+func (r *SettingRepository) SqlDelete(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) error {
 	builder := sqlbuilder.NewSqlBuilder("delete")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -149,8 +153,8 @@ func (r *SettingRepository) SqlDelete(tx pgx.Tx, tbName string, identifier strin
 	}
 	sqlStatement.AddIdentifier(identifier)
 
-	deleteUserCommandTag, deleteUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), valIdentifier)
-	if deleteUseridErr != nil || deleteUserCommandTag.RowsAffected() != 1 {
+	_, deleteUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), valIdentifier)
+	if deleteUseridErr != nil {
 		return fmt.Errorf("failed to perform sql transaction")
 	}
 

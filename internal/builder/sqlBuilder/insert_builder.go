@@ -5,19 +5,19 @@ import (
 	"strings"
 )
 
-type insertSqlBuilder struct {
+type InsertSqlBuilder struct {
 	colArr     []string
 	col        string
 	tbName     string
 	identifier string
 }
 
-func (s *insertSqlBuilder) AddTable(tbName string) SqlBuilderI {
+func (s *InsertSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *insertSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
+func (s *InsertSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	prepStatement := " ("
 	if colArr == nil {
 		return nil
@@ -35,16 +35,16 @@ func (s *insertSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *insertSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
+func (s *InsertSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	return s
 }
 
-func (s *insertSqlBuilder) Build() string {
+func (s *InsertSqlBuilder) Build() string {
 	prepStatement := "INSERT INTO "
-	if s.tbName == "" && s.col == "" {
+	if s.tbName == "" || s.col == "" {
 		return ""
 	}
-	prepStatement += s.tbName + " " + s.col + " VALUES ( "
+	prepStatement += s.tbName + s.col + "VALUES ("
 	for i := 1; i <= len(s.colArr); i++ {
 		prepStatement += " $" + strconv.Itoa(i) + " ,"
 	}

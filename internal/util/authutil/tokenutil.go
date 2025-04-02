@@ -10,10 +10,18 @@ import (
 )
 
 func GetJWTBlock(key string, keyType string) (*pem.Block, error) {
+
 	loadEnvErrs := godotenv.Load("../.env")
 	if loadEnvErrs != nil {
-		return nil, fmt.Errorf("failed to load env file")
+		// test env from service
+		loadTestEnvErr := godotenv.Load("../../.env")
+		if loadTestEnvErr != nil {
+			return nil, fmt.Errorf("failed to load env file")
+		}
 	}
+
+	fmt.Println("IT PASS CHECK")
+
 	base64JWTkey := os.Getenv(key)
 	if base64JWTkey == "" {
 		return nil, fmt.Errorf("failed to load env file")

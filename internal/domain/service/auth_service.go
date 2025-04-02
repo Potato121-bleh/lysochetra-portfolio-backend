@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	generator "profile-portfolio/internal/generateKey"
 	"profile-portfolio/internal/util/authutil"
@@ -12,29 +13,27 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuthServiceI interface {
-	SignUp(tx pgx.Tx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error
+	SignUp(tx db.DatabaseTx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error
 	SigningToken(userStruct model.UserData) (string, error)
 	ParseJwt(cookie *http.Cookie) (jwt.MapClaims, error)
 }
 
 type AuthService struct {
-	db *pgxpool.Pool
+	db db.Database
 }
 
-func NewAuthService(db *pgxpool.Pool) AuthServiceI {
+func NewAuthService(db db.Database) AuthServiceI {
 	return &AuthService{
 		db: db,
 	}
 }
 
-func (s *AuthService) SignUp(tx pgx.Tx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error {
+func (s *AuthService) SignUp(tx db.DatabaseTx, userSvc UserServiceI, reqUsername string, reqNickname string, reqPassword string) error {
 
-	newSettingRow := tx.QueryRow(context.Background(), "INSERT INTO user_setting (darkmode, sound, colorpalettes, font, language) VALUES (0, 0, 0, 1, 1)	RETURNING settingid")
+	newSettingRow := tx.QueryRow(context.Background(), "INSERT INTO user_setting (darkmode, sound, colorpalettes, font, language) VALUES (0, 0, 0, 1, 1) RETURNING settingid")
 	var latestSettingId int
 	queriedSettingIdErr := newSettingRow.Scan(&latestSettingId)
 	if queriedSettingIdErr != nil {
@@ -42,13 +41,7 @@ func (s *AuthService) SignUp(tx pgx.Tx, userSvc UserServiceI, reqUsername string
 	}
 
 	// we insert new user with setting id we currently
-	fmt.Println([]string{reqUsername, reqNickname, reqPassword, strconv.Itoa(latestSettingId)})
-	// insertUserErr := s.userSvc.SqlInsert(
-	// 	tx,
-	// 	"userauth",
-	// 	[]string{"username", "nickname", "password", "setting_id"},
-	// 	[]string{reqUsername, reqNickname, reqPassword, strconv.Itoa(latestSettingId)},
-	// )
+	// fmt.Println([]string{reqUsername, reqNickname, reqPassword, strconv.Itoa(latestSettingId)})
 	insertUserErr := userSvc.Insert(
 		tx,
 		"userauth",
@@ -104,19 +97,16 @@ func (s *AuthService) SigningToken(userStruct model.UserData) (string, error) {
 func (s *AuthService) ParseJwt(cookie *http.Cookie) (jwt.MapClaims, error) {
 	jwtSign := cookie.Value
 	if jwtSign == "" {
-		// http.Error(w, "token not found", http.StatusUnauthorized)
 		return nil, fmt.Errorf("token not found")
 	}
 
 	jwtblock, parseJwtBlockErr := authutil.GetJWTBlock("PUBLIC_KEY", "PUBLIC KEY")
 	if parseJwtBlockErr != nil {
-		// http.Error(w, "failed to retrieve public key: "+parseJwtBlockErr.Error(), http.StatusInternalServerError)
 		return nil, fmt.Errorf("failed to retrieve public key: " + parseJwtBlockErr.Error())
 	}
 
 	publicKey, x509ParseJwtErr := x509.ParsePKCS1PublicKey(jwtblock.Bytes)
 	if x509ParseJwtErr != nil {
-		// http.Error(w, "failed to retrieve public key", http.StatusInternalServerError)
 		return nil, fmt.Errorf("failed to retrieve public key: " + x509ParseJwtErr.Error())
 	}
 
@@ -127,7 +117,6 @@ func (s *AuthService) ParseJwt(cookie *http.Cookie) (jwt.MapClaims, error) {
 		return publicKey, nil
 	})
 	if jwtParsingErr != nil {
-		// http.Error(w, "failed to parse jwt: "+jwtParsingErr.Error(), http.StatusUnauthorized)
 		return nil, fmt.Errorf("failed to parse jwt: " + jwtParsingErr.Error())
 	}
 
@@ -137,7 +126,6 @@ func (s *AuthService) ParseJwt(cookie *http.Cookie) (jwt.MapClaims, error) {
 
 	jwtClaims, claimsOk := jwtToken.Claims.(jwt.MapClaims)
 	if !claimsOk {
-		// http.Error(w, "failed to parse jwt", http.StatusUnauthorized)
 		return nil, fmt.Errorf("failed to parse jwt claims")
 	}
 

@@ -5,18 +5,19 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
 	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
+	// "github.com/jackc/pgx/v5/pgxpool"
 )
 
 var JwtClaimsContextKey ContextKey = "jwtToken"
 
 type SettingHandler struct {
-	DB         *pgxpool.Pool
+	DB         db.Database
 	UserSvc    service.UserServiceI
 	SettingSvc service.SettingServiceI
 }

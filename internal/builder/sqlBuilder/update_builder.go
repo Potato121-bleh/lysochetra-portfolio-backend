@@ -5,19 +5,19 @@ import (
 	"strings"
 )
 
-type updateSqlBuilder struct {
+type UpdateSqlBuilder struct {
 	colArr     []string
 	col        string
 	identifier string
 	tbName     string
 }
 
-func (s *updateSqlBuilder) AddTable(tbName string) SqlBuilderI {
+func (s *UpdateSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *updateSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
+func (s *UpdateSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	if len(colArr) == 0 {
 		return s
 	}
@@ -37,18 +37,18 @@ func (s *updateSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *updateSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
+func (s *UpdateSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	s.identifier = identifier
 	return s
 }
 
-func (s *updateSqlBuilder) Build() string {
+func (s *UpdateSqlBuilder) Build() string {
 	prepStatement := "UPDATE "
 	if s.tbName == "" || s.col == "" {
 		return ""
 	}
 
-	prepStatement += s.tbName + " SET " + s.col
+	prepStatement += s.tbName + " SET" + s.col
 
 	if s.identifier != "" {
 		prepStatement += " WHERE " + s.identifier + " = $" + strconv.Itoa(len(s.colArr)+1)

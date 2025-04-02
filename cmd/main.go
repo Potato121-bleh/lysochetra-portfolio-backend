@@ -2,6 +2,8 @@ package main
 
 import (
 	"profile-portfolio/internal/application"
+	"profile-portfolio/internal/db"
+
 	// "profile-portfolio/internal/auth"
 
 	// "profile-portfolio/internal/domain/repository"
@@ -11,6 +13,8 @@ import (
 	"os"
 	"profile-portfolio/internal/domain/service"
 	"profile-portfolio/internal/middleware"
+
+	// "profile-portfolio/test/mock"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -44,22 +48,27 @@ func main() {
 	pgxConfig.MaxConns = 80
 	pgxConfig.HealthCheckPeriod = 5 * time.Minute
 
-	db, dbConErr := pgxpool.NewWithConfig(context.Background(), pgxConfig)
+	pgxDb, dbConErr := pgxpool.NewWithConfig(context.Background(), pgxConfig)
 	if dbConErr != nil {
 		log.Fatal("failed to connect to database")
 	}
 
 	muxhandler := mux.NewRouter()
 
-	userSvc := service.NewUserService(db)
-	settingSvc := service.NewSettingService(db)
-	authSvc := service.NewAuthService(db)
+	// testtx, e := db.Begin(context.Background())
+	// lmaoe(testtx)
 
-	authHandlers := &application.AuthHandler{DB: db, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}
-	handleQuerys := &application.SettingHandler{DB: db, UserSvc: userSvc, SettingSvc: settingSvc}
+	newDb := db.NewPgxDBAdapter(pgxDb)
+
+	userSvc := service.NewUserService(newDb)
+	settingSvc := service.NewSettingService(newDb)
+	authSvc := service.NewAuthService(newDb)
+
+	authHandlers := &application.AuthHandler{DB: newDb, CxtTimeout: cxtTimeout, AuthSvc: authSvc, UserSvc: userSvc}
+	handleQuerys := &application.SettingHandler{DB: newDb, UserSvc: userSvc, SettingSvc: settingSvc}
 
 	muxhandler.HandleFunc("/user/auth",
-		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.HandleSigningToken, db))).Methods("OPTIONS", "POST")
+		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.HandleSigningToken, newDb))).Methods("OPTIONS", "POST")
 
 	muxhandler.HandleFunc("/user/signup",
 		middleware.MiddlewareCORSValidate(authHandlers.HandleSignup)).Methods("POST", "OPTIONS")
@@ -79,7 +88,7 @@ func main() {
 		middleware.MiddlewareCORSValidate(authHandlers.RetrieveCSRFKey)).Methods("OPTIONS", "GET")
 
 	muxhandler.HandleFunc("/testing-for-cookie/{username}/{password}",
-		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.Handletesting, db))).Methods("GET", "OPTIONS")
+		middleware.MiddlewareCORSValidate(middleware.MiddlewareValidateAuth(authHandlers.Handletesting, newDb))).Methods("GET", "OPTIONS")
 
 	http.ListenAndServe(":5000", muxhandler)
 

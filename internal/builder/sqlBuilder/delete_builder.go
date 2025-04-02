@@ -1,29 +1,29 @@
 package sqlbuilder
 
-type deleteSqlBuilder struct {
+type DeleteSqlBuilder struct {
 	tbName     string
 	identifier string
 }
 
-func (s *deleteSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
+func (s *DeleteSqlBuilder) AddColumn(colArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *deleteSqlBuilder) AddValue(valArr []string) SqlBuilderI {
+func (s *DeleteSqlBuilder) AddValue(valArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *deleteSqlBuilder) AddTable(tbName string) SqlBuilderI {
+func (s *DeleteSqlBuilder) AddTable(tbName string) SqlBuilderI {
 	s.tbName = tbName
 	return s
 }
 
-func (s *deleteSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
+func (s *DeleteSqlBuilder) AddIdentifier(identifier string) SqlBuilderI {
 	s.identifier = identifier
 	return s
 }
 
-func (s *deleteSqlBuilder) Build() string {
+func (s *DeleteSqlBuilder) Build() string {
 	prepStatement := "DELETE FROM"
 	if s.tbName == "" || s.identifier == "" {
 		return ""

@@ -3,10 +3,8 @@ package dbutil
 import (
 	"context"
 	"fmt"
+	"profile-portfolio/internal/db"
 	"reflect"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type OnlyStruct interface{}
@@ -14,7 +12,7 @@ type OnlyStruct interface{}
 // This function are built for specific use with all services where it need to make sure the transaction are good to go.
 // This function will take in your pgx.Tx, if your transaction is nil,
 // then the PrepTx will create new tx for later execution
-func PrepTx(tx pgx.Tx, db *pgxpool.Pool, cxt context.Context) pgx.Tx {
+func PrepTx(tx db.DatabaseTx, db db.Database, cxt context.Context) db.DatabaseTx {
 	if tx != nil {
 		return tx
 	}
@@ -42,7 +40,7 @@ func PrepTx(tx pgx.Tx, db *pgxpool.Pool, cxt context.Context) pgx.Tx {
 //	False: "indicate that all expected execution are failed, (This might due to commit or rollback failed)""
 //
 // .
-func FinalizeTx(originTx pgx.Tx, currentTx pgx.Tx, cxt context.Context) bool {
+func FinalizeTx(originTx db.DatabaseTx, currentTx db.DatabaseTx, cxt context.Context) bool {
 	if originTx == nil {
 		commitErr := currentTx.Commit(cxt)
 		if commitErr != nil {
@@ -59,18 +57,15 @@ func FinalizeTx(originTx pgx.Tx, currentTx pgx.Tx, cxt context.Context) bool {
 }
 
 // This method will perform operation to retrieve data from provided row into the provided struct
-func ScanRow(row pgx.Rows, dest interface{}) error {
+func ScanRow(row db.RowScanner, dest interface{}) error {
 	// we retrieve the value of the dest
-	fmt.Println("about to ENTER an error")
 	val := reflect.ValueOf(dest).Elem()
-	fmt.Println("about to PASS an error")
 
 	values := make([]interface{}, val.NumField())
 
 	for i := range values {
 		values[i] = val.Field(i).Addr().Interface()
 	}
-
 	scanErr := row.Scan(values...)
 	if scanErr != nil {
 		return fmt.Errorf(scanErr.Error())

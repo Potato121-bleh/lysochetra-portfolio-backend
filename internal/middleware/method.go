@@ -16,14 +16,37 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"profile-portfolio/internal/application"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
-func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http.HandlerFunc {
+func MiddlewareCORSValidate(nextHandler http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		loadingEnvErr := godotenv.Load("../.env")
+		if loadingEnvErr != nil {
+			http.Error(w, "failed to load env: "+loadingEnvErr.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_ORIGIN"))
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PATCH")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		nextHandler(w, r)
+	}
+}
+
+func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db db.Database) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		if r.Method != http.MethodPost {
@@ -59,29 +82,6 @@ func MiddlewareValidateAuth(nextHandler http.HandlerFunc, db *pgxpool.Pool) http
 		cxtWithData := context.WithValue(r.Context(), application.NewUserKey, newUser)
 
 		nextHandler(w, r.WithContext(cxtWithData))
-	}
-}
-
-func MiddlewareCORSValidate(nextHandler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-		loadingEnvErr := godotenv.Load("../.env")
-		if loadingEnvErr != nil {
-			http.Error(w, "failed to load env: "+loadingEnvErr.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_ORIGIN"))
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE, PATCH")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		nextHandler(w, r)
 	}
 }
 

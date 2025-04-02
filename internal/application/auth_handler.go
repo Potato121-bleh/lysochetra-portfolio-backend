@@ -5,11 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/domain/service"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var NewUserKey ContextKey = "userinfo"
@@ -17,7 +16,7 @@ var NewUserKey ContextKey = "userinfo"
 type ContextKey string
 
 type AuthHandler struct {
-	DB         *pgxpool.Pool
+	DB         db.Database
 	CxtTimeout context.Context
 	AuthSvc    service.AuthServiceI
 	UserSvc    service.UserServiceI

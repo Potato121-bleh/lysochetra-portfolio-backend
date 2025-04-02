@@ -10,13 +10,13 @@ type SqlBuilderI interface {
 func NewSqlBuilder(builderName string) SqlBuilderI {
 	switch builderName {
 	case "select":
-		return &selectSqlbuilder{}
+		return &SelectSqlbuilder{}
 	case "insert":
-		return &insertSqlBuilder{}
+		return &InsertSqlBuilder{}
 	case "update":
-		return &updateSqlBuilder{}
+		return &UpdateSqlBuilder{}
 	case "delete":
-		return &deleteSqlBuilder{}
+		return &DeleteSqlBuilder{}
 	default:
 		return nil
 	}

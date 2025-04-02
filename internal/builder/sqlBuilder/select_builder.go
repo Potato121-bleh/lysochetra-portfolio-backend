@@ -2,19 +2,19 @@ package sqlbuilder
 
 import "strings"
 
-type selectSqlbuilder struct {
+type SelectSqlbuilder struct {
 	col        string
 	tbName     string
 	identifier string
 }
 
-func (s *selectSqlbuilder) AddColumn(colArr []string) SqlBuilderI {
+func (s *SelectSqlbuilder) AddColumn(colArr []string) SqlBuilderI {
 	if len(colArr) == 0 {
 		return s
 	}
 	var newStatement string
 	for i := 0; i < len(colArr); i++ {
-		newStatement += " " + colArr[i] + " , "
+		newStatement += "" + colArr[i] + " , "
 	}
 	tempStatement := strings.Split(newStatement, " ")
 	var newStatementFormatted = strings.Join(tempStatement[:len(tempStatement)-2], " ")
@@ -22,7 +22,7 @@ func (s *selectSqlbuilder) AddColumn(colArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *selectSqlbuilder) AddTable(tbName string) SqlBuilderI {
+func (s *SelectSqlbuilder) AddTable(tbName string) SqlBuilderI {
 	if tbName == "" {
 		return nil
 	}
@@ -30,7 +30,7 @@ func (s *selectSqlbuilder) AddTable(tbName string) SqlBuilderI {
 	return s
 }
 
-func (s *selectSqlbuilder) AddIdentifier(identifier string) SqlBuilderI {
+func (s *SelectSqlbuilder) AddIdentifier(identifier string) SqlBuilderI {
 	if identifier != "" {
 		s.identifier = identifier
 		return s
@@ -38,11 +38,11 @@ func (s *selectSqlbuilder) AddIdentifier(identifier string) SqlBuilderI {
 	return nil
 }
 
-func (s *selectSqlbuilder) AddValue(valArr []string) SqlBuilderI {
+func (s *SelectSqlbuilder) AddValue(valArr []string) SqlBuilderI {
 	return s
 }
 
-func (s *selectSqlbuilder) Build() string {
+func (s *SelectSqlbuilder) Build() string {
 	sqlStatement := "SELECT"
 	if s.col == "" {
 		sqlStatement += " * "
@@ -52,11 +52,11 @@ func (s *selectSqlbuilder) Build() string {
 	if s.tbName == "" {
 		return ""
 	}
-	sqlStatement += "FROM " + s.tbName + " "
+	sqlStatement += "FROM " + s.tbName
 	if s.identifier == "" {
 		return sqlStatement
 	} else {
-		sqlStatement += "WHERE " + s.identifier + " = $1"
+		sqlStatement += " WHERE " + s.identifier + " = $1"
 	}
 	return sqlStatement
 }

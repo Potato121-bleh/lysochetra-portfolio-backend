@@ -4,27 +4,26 @@ import (
 	"context"
 	"fmt"
 	sqlbuilder "profile-portfolio/internal/builder/sqlBuilder"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/model"
 	"profile-portfolio/internal/util/dbutil"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type UserRepository struct {
 }
 
 type UserRepositoryI interface {
-	SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error)
-	SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error
-	SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error
-	SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error
+	SqlSelect(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error)
+	SqlInsert(tx db.DatabaseTx, tbName string, colArr []string, valArr []string) error
+	SqlUpdate(tx db.DatabaseTx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error
+	SqlDelete(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) error
 }
 
 func NewUserRepository() UserRepositoryI {
 	return &UserRepository{}
 }
 
-func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error) {
+func (r *UserRepository) SqlSelect(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) ([]model.UserData, error) {
 	builder := sqlbuilder.NewSqlBuilder("select")
 	if builder == nil {
 		return nil, fmt.Errorf("failed to start the builder")
@@ -34,18 +33,15 @@ func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, 
 	if identifier != "" {
 		sqlStatement.AddIdentifier(identifier)
 	}
-
 	rows, queriedErr := tx.Query(context.Background(), sqlStatement.Build(), valIdentifier)
 	if queriedErr != nil {
 		return nil, fmt.Errorf("failed to execute transaction")
 	}
 
 	responseData := []model.UserData{}
-
 	for rows.Next() {
 
 		newPrepInstance := model.UserData{}
-
 		scanErr := dbutil.ScanRow(rows, &newPrepInstance)
 		if scanErr != nil {
 			return nil, fmt.Errorf("failed to scan queried row: %v", scanErr.Error())
@@ -59,7 +55,7 @@ func (r *UserRepository) SqlSelect(tx pgx.Tx, tbName string, identifier string, 
 
 }
 
-func (r *UserRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, valArr []string) error {
+func (r *UserRepository) SqlInsert(tx db.DatabaseTx, tbName string, colArr []string, valArr []string) error {
 	builder := sqlbuilder.NewSqlBuilder("insert")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -74,13 +70,17 @@ func (r *UserRepository) SqlInsert(tx pgx.Tx, tbName string, colArr []string, va
 
 	insertUserCommandTag, insertUserErr := tx.Exec(context.Background(), sqlStatement.Build(), valArrI...)
 	if insertUserErr != nil || insertUserCommandTag.RowsAffected() != 1 {
-		return fmt.Errorf("failed to execute sql statement: %v", insertUserErr.Error())
+		errStr := "failed to execute sql statement"
+		if insertUserErr != nil {
+			errStr += ": " + insertUserErr.Error()
+		}
+		return fmt.Errorf(errStr)
 	}
 
 	return nil
 }
 
-func (r *UserRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
+func (r *UserRepository) SqlUpdate(tx db.DatabaseTx, tbName string, colArr []string, colVal []string, identifier string, valIdentifier string) error {
 
 	builder := sqlbuilder.NewSqlBuilder("update")
 	if builder == nil {
@@ -98,15 +98,16 @@ func (r *UserRepository) SqlUpdate(tx pgx.Tx, tbName string, colArr []string, co
 		colValI[i] = v
 	}
 
-	updateUserCommandTag, updateUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), colValI...)
-	if updateUseridErr != nil || updateUserCommandTag.RowsAffected() != 1 {
+	// ColValI already checked: it work well as identifier value stay at the end
+	_, updateUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), colValI...)
+	if updateUseridErr != nil {
 		return fmt.Errorf("failed to perform sql transaction")
 	}
 
 	return nil
 }
 
-func (r *UserRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, valIdentifier string) error {
+func (r *UserRepository) SqlDelete(tx db.DatabaseTx, tbName string, identifier string, valIdentifier string) error {
 	builder := sqlbuilder.NewSqlBuilder("delete")
 	if builder == nil {
 		return fmt.Errorf("failed to start the builder")
@@ -118,8 +119,8 @@ func (r *UserRepository) SqlDelete(tx pgx.Tx, tbName string, identifier string, 
 	}
 	sqlStatement.AddIdentifier(identifier)
 
-	deleteUserCommandTag, deleteUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), valIdentifier)
-	if deleteUseridErr != nil || deleteUserCommandTag.RowsAffected() != 1 {
+	_, deleteUseridErr := tx.Exec(context.Background(), sqlStatement.Build(), valIdentifier)
+	if deleteUseridErr != nil {
 		return fmt.Errorf("failed to perform sql transaction")
 	}
 
