@@ -160,6 +160,7 @@ func (s *AuthHandler) HandleSignup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte("User Created Successfully"))
 	commitTranErr := tx.Commit(context.Background())
 	if commitTranErr != nil {

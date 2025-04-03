@@ -61,32 +61,9 @@ func (r *SettingRepository) SqlSelect(tx db.DatabaseTx, tbName string, identifie
 
 		responseData = append(responseData, newPrepInstance)
 
-		// var useridTem int
-		// var usernameTem string
-		// var userpasswordTem string
-		// var usernicknameTem string
-		// var usersettingidTem int
-		// scannedRowErr := rows.Scan(&useridTem, &usernameTem, &usernicknameTem, &userpasswordTem, nil, &usersettingidTem)
-		// if scannedRowErr != nil {
-		// 	return nil
-		// }
-
-		// //create context to pass the data to actual handler
-		// newUser := UserData{
-		// 	Id:        useridTem,
-		// 	Username:  usernameTem,
-		// 	Password:  userpasswordTem,
-		// 	Nickname:  usernicknameTem,
-		// 	SettingId: usersettingidTem,
-		// }
-		// responseData = append(responseData, newUser)
 	}
 
-	// instead of returning the queried data we returning error
-	// so that the service know there is no error upon query the data, the service can call getData
-	// r.queriedData = responseData
 	return responseData, nil
-
 }
 
 func (r *SettingRepository) SqlInsert(tx db.DatabaseTx, tbName string, colArr []string, valArr []string) error {

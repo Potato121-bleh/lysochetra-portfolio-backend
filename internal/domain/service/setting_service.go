@@ -38,11 +38,6 @@ func (s *SettingService) Select(tx db.DatabaseTx, tbName string, identifier stri
 
 	newTx := dbutil.PrepTx(tx, s.db, cxt)
 
-	// tx, startTxErr := s.db.Begin(context.Background())
-	// if startTxErr != nil {
-	// 	return nil, fmt.Errorf("failed to begin the transaction")
-	// }
-
 	queriedData, queriedErr := s.repo.SqlSelect(newTx, tbName, identifier, valIdentifier)
 	if queriedErr != nil {
 		rollbackErr := newTx.Rollback(context.Background())

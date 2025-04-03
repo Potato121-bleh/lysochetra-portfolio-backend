@@ -1,20 +1,15 @@
 package main
 
 import (
-	"profile-portfolio/internal/application"
-	"profile-portfolio/internal/db"
-
-	// "profile-portfolio/internal/auth"
-
-	// "profile-portfolio/internal/domain/repository"
 	"context"
 	"log"
 	"net/http"
 	"os"
+	"profile-portfolio/internal/application"
+	"profile-portfolio/internal/db"
 	"profile-portfolio/internal/domain/service"
 	"profile-portfolio/internal/middleware"
 
-	// "profile-portfolio/test/mock"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -54,9 +49,6 @@ func main() {
 	}
 
 	muxhandler := mux.NewRouter()
-
-	// testtx, e := db.Begin(context.Background())
-	// lmaoe(testtx)
 
 	newDb := db.NewPgxDBAdapter(pgxDb)
 

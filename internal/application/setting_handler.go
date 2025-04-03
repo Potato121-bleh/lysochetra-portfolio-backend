@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
-	// "github.com/jackc/pgx/v5/pgxpool"
 )
 
 var JwtClaimsContextKey ContextKey = "jwtToken"
@@ -52,7 +51,6 @@ func (q *SettingHandler) HandleQuerySetting(w http.ResponseWriter, r *http.Reque
 func (q *SettingHandler) HandleUpdateSetting(w http.ResponseWriter, r *http.Request) {
 	jwtClaims := r.Context().Value(JwtClaimsContextKey).(jwt.MapClaims)
 	settingId := int(jwtClaims["SettingId"].(float64))
-
 	reqSettingUpdate := model.SettingStruct{}
 	decodeReqBodyErr := json.NewDecoder(r.Body).Decode(&reqSettingUpdate)
 	if decodeReqBodyErr != nil {
@@ -81,11 +79,12 @@ func (q *SettingHandler) HandleUpdateSetting(w http.ResponseWriter, r *http.Requ
 
 	updateErr := q.SettingSvc.Update(
 		tx, "user_setting",
-		[]string{"darkmode", "Sound", "colorpalettes", "font", "language"},
+		[]string{"darkmode", "sound", "colorpalettes", "font", "language"},
 		colValFilter,
 		"settingid",
 		strconv.Itoa(settingId),
 	)
+
 	if updateErr != nil {
 		rollbackErr := tx.Rollback(context.Background())
 		if rollbackErr != nil {
@@ -97,7 +96,7 @@ func (q *SettingHandler) HandleUpdateSetting(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Update Successfully"))
 	commitErr := tx.Commit(context.Background())
 	if commitErr != nil {

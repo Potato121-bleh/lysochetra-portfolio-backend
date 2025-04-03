@@ -20,8 +20,6 @@ func GetJWTBlock(key string, keyType string) (*pem.Block, error) {
 		}
 	}
 
-	fmt.Println("IT PASS CHECK")
-
 	base64JWTkey := os.Getenv(key)
 	if base64JWTkey == "" {
 		return nil, fmt.Errorf("failed to load env file")

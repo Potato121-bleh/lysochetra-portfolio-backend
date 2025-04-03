@@ -40,14 +40,13 @@ func (s *AuthService) SignUp(tx db.DatabaseTx, userSvc UserServiceI, reqUsername
 		return fmt.Errorf("failed to query settingid")
 	}
 
-	// we insert new user with setting id we currently
-	// fmt.Println([]string{reqUsername, reqNickname, reqPassword, strconv.Itoa(latestSettingId)})
 	insertUserErr := userSvc.Insert(
 		tx,
 		"userauth",
 		[]string{"username", "nickname", "password", "setting_id"},
 		[]string{reqUsername, reqNickname, reqPassword, strconv.Itoa(latestSettingId)},
 	)
+
 	if insertUserErr != nil {
 		return fmt.Errorf("failed to insert userauth (%v)", insertUserErr.Error())
 	}
@@ -59,7 +58,6 @@ func (s *AuthService) SignUp(tx db.DatabaseTx, userSvc UserServiceI, reqUsername
 func (s *AuthService) SigningToken(userStruct model.UserData) (string, error) {
 	block, parseBlockErr := authutil.GetJWTBlock("PRIVATE_KEY", "RSA PRIVATE KEY")
 	if parseBlockErr != nil {
-		// http.Error(w, "failed to parsing key: "+parsePrivateKeyErr.Error(), http.StatusInternalServerError)
 		return "", fmt.Errorf("failed to parsing key: %v", parseBlockErr.Error())
 	}
 
@@ -70,7 +68,6 @@ func (s *AuthService) SigningToken(userStruct model.UserData) (string, error) {
 
 	genCSRFKey, genCSRFKeyErr := generator.GenerateCSRFKey()
 	if genCSRFKeyErr != nil {
-		// http.Error(w, "failed to gen key: "+genCSRFKeyErr.Error(), http.StatusInternalServerError)
 		return "", fmt.Errorf("failed to gen key: %v", genCSRFKeyErr.Error())
 	}
 

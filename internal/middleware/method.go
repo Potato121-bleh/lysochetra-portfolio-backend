@@ -107,7 +107,6 @@ func MiddlewareCSRFCheck(nextHandler http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "failed to decode jwt token: "+decodeJwtErr.Error(), http.StatusUnauthorized)
 			return
 		}
-
 		csrfJWTToken := jwtClaims["CSRFKey"].(string)
 
 		if csrfHeaderToken != csrfJWTToken {
