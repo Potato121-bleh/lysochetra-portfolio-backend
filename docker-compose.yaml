@@ -1,0 +1,39 @@
+version: '3.9'
+
+
+services:
+  db:
+    image: postgres:17 
+    container_name: my--sectest-pgdb-container
+    environment:
+      POSTGRES_USER: username1
+      POSTGRES_PASSWORD: password1
+      POSTGRES_DB: mydb
+    ports:
+      - 5435:5432
+    volumes:
+      - testpgxData:/var/lib/postgresql/data
+    networks:
+      - backend-net
+  backend:
+    build:
+      context: .
+    container_name: test-backend-container
+    environment: 
+      DB_HOST: db
+      DB_USER: username1
+      DB_PASSWORD: password1
+      DB_PORT: 5432
+      DB_NAME: mydb
+    depends_on:
+      - db
+    ports: 
+      - "5000:5000"
+    networks:
+      - backend-net
+volumes:
+  testpgxData:
+networks:
+  backend-net:
+
+
